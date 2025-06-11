@@ -1,0 +1,15 @@
+#define delay_time 10000
+
+void TaskTemperatureHumidity(void *pvParameters)
+{
+    while (true)
+    {
+        vTaskDelay(delay_time / portTICK_PERIOD_MS);
+    }
+}
+
+
+void setup()
+{
+xTaskCreate(TaskTemperatureHumidity, "Task_name", 2048, NULL, 1, NULL);
+}
