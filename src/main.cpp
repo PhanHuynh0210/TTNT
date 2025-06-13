@@ -4,10 +4,11 @@
 void setup()
 {
   Serial.begin(115200);
-  initDHT20();
+  // initDHT20();
+  InitWiFi();
   initMQTT();
-  initkc();
-  
+  // initkc();
+  initWebServer();
 }
 
 void loop()
@@ -17,4 +18,5 @@ void loop()
     return;
   }
   reconnectMQTT();
+  web();
 }

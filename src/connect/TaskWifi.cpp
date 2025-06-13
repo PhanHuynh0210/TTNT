@@ -1,5 +1,6 @@
 #include "TaskWifi.h"
 
+
 constexpr char WIFI_SSID[] = "ACLAB";
 constexpr char WIFI_PASSWORD[] = "ACLAB2023";
 

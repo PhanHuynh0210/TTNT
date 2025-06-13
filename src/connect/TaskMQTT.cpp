@@ -5,7 +5,7 @@
 #define MQTT_PORT 1883
 
 String IO_USERNAME = "huynh0210";
-String IO_KEY = "REDACTED";
+String IO_KEY = "ADAFRUIT_IO_KEY";
 
 WiFiClient espClient;
 PubSubClient client(espClient);
@@ -45,10 +45,8 @@ void InitMQTT()
         Serial.println("MQTT Connected");
         client.subscribe((String(IO_USERNAME) + "/feeds/feed_2").c_str());
         client.subscribe((String(IO_USERNAME) + "/feeds/feed_3").c_str());
+        publishData("wifi", WiFi.localIP().toString() );
 
-        String data = "hello";
-        publishData("feed_1", data);
-        Serial.println("Start");
     }
     else
     {
