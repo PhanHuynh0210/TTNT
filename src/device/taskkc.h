@@ -3,7 +3,7 @@
 
 #include "globals.h"
 
-extern void test();
+extern int test();
 extern void initkc();
 extern void kc(void *pvParameters);
 #endif /* INC_TASKKC_H_ */

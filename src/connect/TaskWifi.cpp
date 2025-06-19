@@ -14,6 +14,7 @@ void InitWiFi()
         Serial.print(".");
     }
     Serial.println("Connected to AP");
+    Serial.println(WiFi.localIP());
 }
 
 bool Wifi_reconnect()

@@ -3,7 +3,7 @@
 const int trig = 18;     // chân trig của HC-SR04
 const int echo = 21;     // chân echo của HC-SR04void test() 
 
-void test(){
+int test(){
     unsigned long duration; // biến đo thời gian
     int distance;           // biến lưu khoảng cách
     
@@ -24,6 +24,7 @@ void test(){
     /* In kết quả ra Serial Monitor */
     Serial.print(distance);
     Serial.println("cm");
+    return distance;
 }
 void kc(void *pvParameters)
 {
@@ -39,7 +40,6 @@ void initkc()
     pinMode(trig,OUTPUT);   // chân trig sẽ phát tín hiệu
     pinMode(echo,INPUT); 
     xTaskCreate(kc, "kc", 4096, NULL, 1, NULL);
-
 }
 
 

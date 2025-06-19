@@ -19,7 +19,7 @@ void getValueDHT20()
     }
 }
 
-
+ 
 void TaskTemperatureHumidity(void *pvParameters)
 {
     while (true)

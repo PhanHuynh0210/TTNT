@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="data:,">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Roboto', sans-serif;
+      background-color: #f2f2f2;
+      text-align: center;
+      margin: 0;
+      padding: 20px;
+    }
+
+    h1 {
+      color: #333;
+    }
+
+    .button {
+      background-color: #4CAF50;
+      border: none;
+      color: white;
+      padding: 12px 28px;
+      font-size: 20px;
+      margin: 5px;
+      cursor: pointer;
+      border-radius: 6px;
+    }
+
+    .button2 {
+      background-color: #888;
+    }
+
+    .card {
+      background-color: white;
+      border-radius: 10px;
+      padding: 20px;
+      margin: 15px auto;
+      max-width: 400px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+
+    .sensor-data {
+      font-size: 18px;
+      margin: 8px 0;
+    }
+
+    form input[type="number"] {
+      padding: 8px;
+      font-size: 16px;
+      width: 80px;
+    }
+
+    form input[type="submit"] {
+      padding: 8px 16px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+  </style>
+
+<script>
+  function updateSensors() {
+    fetch('/api/sensors')
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById('temp').textContent = data.Temp + " °C";
+        document.getElementById('humid').textContent = data.Humid + " %";
+        document.getElementById('soli').textContent = data.Soli + " %";
+        document.getElementById('distance').textContent = data.Distance + " cm";
+        document.getElementById('lux').textContent = data.Lux + " lux";
+      });
+
+  }
+  function updateLEDStates() {
+    fetch('/api/leds')
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById('stateA').textContent = data.A;
+        // document.getElementById('stateB').textContent = data.B;
+        document.getElementById('stateC').textContent = data.C;
+
+        // Nút LED A
+        document.getElementById('buttonA').innerHTML =
+          `<button class="button ${data.A === 'on' ? 'button2' : ''}" 
+            onclick="toggleLED('A', '${data.A === 'on' ? 'off' : 'on'}')">
+            ${data.A === 'on' ? 'OFF' : 'ON'}
+          </button>`;
+
+        // Nút LED B
+        // document.getElementById('buttonB').innerHTML =
+        //   `<button class="button ${data.B === 'on' ? 'button2' : ''}" 
+        //     onclick="toggleLED('B', '${data.B === 'on' ? 'off' : 'on'}')">
+        //     ${data.B === 'on' ? 'OFF' : 'ON'}
+        //   </button>`;
+
+        // Nút LED C
+        document.getElementById('buttonC').innerHTML =
+          `<button class="button ${data.C === 'on' ? 'button2' : ''}" 
+            onclick="toggleLED('C', '${data.C === 'on' ? 'off' : 'on'}')">
+            ${data.C === 'on' ? 'OFF' : 'ON'}
+          </button>`;
+      });
+  }
+
+  function toggleLED(led, state) {
+    fetch(`/${led}/${state}`)  
+      .then(() => updateLEDStates());
+  }
+
+  setInterval(updateSensors, 5000); 
+  window.onload = updateSensors;
+  window.onload = updateLEDStates;
+</script>
+
+</head>
+<body>
+
+  <h1>ESP32 Web Server</h1>
+
+  <!-- <div class="card">
+    <h3>🌀 Điều khiển tốc độ quạt (0–100)</h3>
+    <form action="/fan">
+      <input type="number" name="speed" min="0" max="100">
+      <input type="submit" value="Đặt tốc độ">
+    </form>
+  </div> -->
+
+  <div class="card">
+    <h3> Điều khiển đèn</h3>
+    <p>LED Đơn - Trạng thái: <strong id="stateA">--</strong></p>
+    <div id="buttonA"></div>
+
+    <!-- <p>LED B - Trạng thái: <strong id="stateB">--</strong></p>
+    <div id="buttonB"></div> -->
+
+    <p>LED RGB - Trạng thái: <strong id="stateC">--</strong></p>
+    <div id="buttonC"></div>
+  </div>
+
+  <div class="card">
+    <h3>Cảm biến</h3>
+    <p class="sensor-data">Nhiệt độ: <strong id="temp">--</strong></p>
+    <p class="sensor-data">Độ ẩm không khí: <strong id="humid">--</strong></p>
+    <p class="sensor-data">Độ ẩm đất: <strong id="soli">--</strong></p>
+    <p class="sensor-data">Khoảng cách: <strong id="distance">--</strong></p>
+    <p class="sensor-data">Ánh sáng: <strong id="lux">--</strong></p>
+
+  </div>
+
+</body>
+</html> 

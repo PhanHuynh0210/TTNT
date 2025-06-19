@@ -4,11 +4,21 @@
 void setup()
 {
   Serial.begin(115200);
-  // initDHT20();
   InitWiFi();
   initMQTT();
-  // initkc();
+  if (!LittleFS.begin()) {
+    Serial.println("LittleFS mount failed");
+    return;
+  }
   initWebServer();
+  initDHT20();
+  initkc();
+  initLCD();
+  initRGB();
+  initLED();
+  initLUX();
+  initFan();
+    
 }
 
 void loop()
@@ -18,5 +28,5 @@ void loop()
     return;
   }
   reconnectMQTT();
-  web();
+  loopWebServer();
 }
