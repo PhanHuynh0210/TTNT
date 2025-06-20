@@ -10,20 +10,9 @@ int getHumid() {
 }
 
 void TaskHumid(void *pvParameters){
-    lcd.clear();
-    humidValue = getHumid();  
-
-    lcd.setCursor(0, 0);
-    lcd.print("Soil Humid:");
-
-    lcd.setCursor(13, 0);
-    lcd.print(humidValue);
-    lcd.print("%");
-
-    vTaskDelay(5000 / portTICK_PERIOD_MS);
-
-    xTaskCreate(Task_LCDDHT, "Task_LCDDHT", 2048, NULL, 1, NULL);
-    vTaskDelete(NULL);
+    while(1){
+        getHumid();
+    }
 }
 
 void initHumid(){

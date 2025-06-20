@@ -48,12 +48,34 @@ void initWebServer() {
     server.send(200, "application/json", json);
   });
 
-//   server.on("/fan", []() {
-//   if (server.hasArg("speed")) {
-//     int speed = server.arg("speed").toInt();
-//     setFanSpeed(speed);
-//   } 
-// });
+server.on("/api/rgbMode", []() {
+  if (server.hasArg("mode")) {
+    String mode = server.arg("mode");
+    if (mode == "auto" || mode == "rainbow" || mode == "static") {
+      rgbMode = mode;
+      server.send(200, "application/json", "{\"status\":\"ok\",\"mode\":\"" + mode + "\"}");
+    } else {
+      server.send(400, "application/json", "{\"error\":\"Invalid mode\"}");
+    }
+  } else {
+    server.send(400, "application/json", "{\"error\":\"Missing 'mode' parameter\"}");
+  }
+});
+
+server.on("/api/setColor", []() {
+  if (server.hasArg("r") && server.hasArg("g") && server.hasArg("b")) {
+    customRed = server.arg("r").toInt();
+    customGreen = server.arg("g").toInt();
+    customBlue = server.arg("b").toInt();
+    server.send(200, "application/json", 
+      "{\"status\":\"ok\",\"r\":" + String(customRed) +
+      ",\"g\":" + String(customGreen) +
+      ",\"b\":" + String(customBlue) + "}");
+  } else {
+    server.send(400, "application/json", "{\"error\":\"Missing r, g, or b parameter\"}");
+  }
+});
+
 
   // Start the web server
   server.begin();

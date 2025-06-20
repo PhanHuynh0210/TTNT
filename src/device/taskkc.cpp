@@ -19,9 +19,7 @@ int test(){
     duration = pulseIn(echo,HIGH);  
     // Tính khoảng cách đến vật.
     distance = int(duration/2/29.412);
-    publishData("khoangcach", String(distance));
 
-    /* In kết quả ra Serial Monitor */
     Serial.print(distance);
     Serial.println("cm");
     return distance;

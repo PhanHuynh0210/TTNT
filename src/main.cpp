@@ -18,7 +18,6 @@ void setup()
   initLED();
   initLUX();
   initFan();
-    
 }
 
 void loop()

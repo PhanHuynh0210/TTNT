@@ -4,7 +4,7 @@
 #include "globals.h"
 extern void Task_LCDADC(void *pvParameters);
 extern void Task_LCDDHT(void *pvParameters);
-extern void Task_LCDTHEMAL(void *pvParameters);
+extern void TaskDisLCD(void *pvParameters);
 extern void initLCD();
 extern LiquidCrystal_I2C lcd;
 

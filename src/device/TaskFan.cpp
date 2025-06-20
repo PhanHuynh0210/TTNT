@@ -5,7 +5,7 @@
 void setFanSpeed(int speedPercent) {
     analogWrite(PinFan,speedPercent);
     handleRoot();
-}
+} 
 
 void TaskFan(void *papvParameters){
     analogWrite(PinFan,100);

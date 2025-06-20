@@ -3,10 +3,17 @@
 #define MY_SCL 11
 #define MY_SDA 12
 
-LiquidCrystal_I2C lcd(33,16,2);
+LiquidCrystal_I2C lcd(33, 16, 2);
 int adcPins[] = {1, 2, 3, 4};
 
-void Task_LCDDHT(void *pvParameters){
+// Task 1: Hiển thị Nhiệt độ & Độ ẩm
+void Task_LCDDHT(void *pvParameters) {
+    unsigned long startTime = millis();
+    char buffer[16];
+    lcd.clear();
+
+    while (millis() - startTime < 5000) {
+        dht20.read();
         lcd.clear();
         dht20.read();
         lcd.setCursor(0, 0);
@@ -18,15 +25,21 @@ void Task_LCDDHT(void *pvParameters){
         lcd.print("Humi: ");
         lcd.print(dht20.getHumidity());
         lcd.print(" %");
-        vTaskDelay(5000 / portTICK_PERIOD_MS);
-        xTaskCreate(Task_LCDADC, "Task_ShowADC", 2048, NULL, 1, NULL);
-        vTaskDelete(NULL);
 
+        vTaskDelay(2000 / portTICK_PERIOD_MS);
+    }
+
+    xTaskCreate(Task_LCDADC, "Task_LCDADC", 2048, NULL, 1, NULL);
+    vTaskDelete(NULL);
 }
 
-void Task_LCDADC(void *pvParameters){
+// Task 2: Hiển thị ADC
+void Task_LCDADC(void *pvParameters) {
+    unsigned long startTime = millis();
     char temp[16];
-     lcd.clear();
+    lcd.clear();
+
+    while (millis() - startTime < 5000) {
         for(int i = 0; i <= 3; i++){
             int adc = analogRead(adcPins[i]);
             lcd.setCursor(0, i % 2);
@@ -34,21 +47,47 @@ void Task_LCDADC(void *pvParameters){
             lcd.print(temp);
 
             if (i == 1) {
-            vTaskDelay(2500 / portTICK_PERIOD_MS);
+            vTaskDelay(2000 / portTICK_PERIOD_MS);
             lcd.clear();
             }
         }
         vTaskDelay(2500 / portTICK_PERIOD_MS);
-        xTaskCreate(TaskHumid, "TaskHumid", 4096, NULL, 1, NULL);
+        xTaskCreate(TaskDisLCD, "TaskDisLCD", 4096, NULL, 1, NULL);
         vTaskDelete(NULL);
+        
+    }
 
-
+   
 }
 
-void initLCD(){
-    Wire.begin(MY_SCL,MY_SDA);
+// Task 3: Hiển thị Khoảng cách
+void TaskDisLCD(void *pvParameters) {
+    unsigned long startTime = millis();
+    lcd.clear();
+
+    while (millis() - startTime < 5000) {
+        int discante = test();
+        char buffer[16];
+
+        lcd.setCursor(0, 0);
+        lcd.print("Distance:");
+
+        lcd.setCursor(0, 1);
+        snprintf(buffer, sizeof(buffer), "%d cm         ", discante);
+        lcd.print(buffer);
+
+        vTaskDelay(2000 / portTICK_PERIOD_MS);
+    }
+
+    // Quay lại Task đầu tiên
+    xTaskCreate(Task_LCDDHT, "Task_LCDDHT", 2048, NULL, 1, NULL);
+    vTaskDelete(NULL);
+}
+
+// Hàm khởi tạo LCD và task đầu tiên
+void initLCD() {
+    Wire.begin(MY_SCL, MY_SDA);
     lcd.init();
     lcd.backlight();
     xTaskCreate(Task_LCDDHT, "Task_LCDDHT", 2048, NULL, 1, NULL);
 }
-

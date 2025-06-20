@@ -71,31 +71,21 @@
         document.getElementById('distance').textContent = data.Distance + " cm";
         document.getElementById('lux').textContent = data.Lux + " lux";
       });
-
   }
+
   function updateLEDStates() {
     fetch('/api/leds')
       .then(res => res.json())
       .then(data => {
         document.getElementById('stateA').textContent = data.A;
-        // document.getElementById('stateB').textContent = data.B;
         document.getElementById('stateC').textContent = data.C;
 
-        // Nút LED A
         document.getElementById('buttonA').innerHTML =
           `<button class="button ${data.A === 'on' ? 'button2' : ''}" 
             onclick="toggleLED('A', '${data.A === 'on' ? 'off' : 'on'}')">
             ${data.A === 'on' ? 'OFF' : 'ON'}
           </button>`;
 
-        // Nút LED B
-        // document.getElementById('buttonB').innerHTML =
-        //   `<button class="button ${data.B === 'on' ? 'button2' : ''}" 
-        //     onclick="toggleLED('B', '${data.B === 'on' ? 'off' : 'on'}')">
-        //     ${data.B === 'on' ? 'OFF' : 'ON'}
-        //   </button>`;
-
-        // Nút LED C
         document.getElementById('buttonC').innerHTML =
           `<button class="button ${data.C === 'on' ? 'button2' : ''}" 
             onclick="toggleLED('C', '${data.C === 'on' ? 'off' : 'on'}')">
@@ -109,9 +99,35 @@
       .then(() => updateLEDStates());
   }
 
-  setInterval(updateSensors, 5000); 
-  window.onload = updateSensors;
-  window.onload = updateLEDStates;
+  function setRGBMode(mode) {
+    fetch(`/api/rgbMode?mode=${mode}`)
+      .then(res => res.json())
+      .then(data => {
+        if (mode === "static") {
+          document.getElementById("colorPickerContainer").style.display = "block";
+        } else {
+          document.getElementById("colorPickerContainer").style.display = "none";
+        }
+        console.log("RGB mode set:", data);
+      });
+  }
+
+  function sendColor() {
+    const color = document.getElementById("colorPicker").value;
+    const r = parseInt(color.substr(1, 2), 16);
+    const g = parseInt(color.substr(3, 2), 16);
+    const b = parseInt(color.substr(5, 2), 16);
+
+    fetch(`/api/setColor?r=${r}&g=${g}&b=${b}`)
+      .then(res => res.json())
+      .then(data => console.log("Color set:", data));
+  }
+
+  setInterval(updateSensors, 2000); 
+  window.onload = () => {
+    updateSensors();
+    updateLEDStates();
+  };
 </script>
 
 </head>
@@ -119,24 +135,29 @@
 
   <h1>ESP32 Web Server</h1>
 
-  <!-- <div class="card">
-    <h3>🌀 Điều khiển tốc độ quạt (0–100)</h3>
-    <form action="/fan">
-      <input type="number" name="speed" min="0" max="100">
-      <input type="submit" value="Đặt tốc độ">
-    </form>
-  </div> -->
-
   <div class="card">
-    <h3> Điều khiển đèn</h3>
+    <h3>Điều khiển đèn</h3>
     <p>LED Đơn - Trạng thái: <strong id="stateA">--</strong></p>
     <div id="buttonA"></div>
 
-    <!-- <p>LED B - Trạng thái: <strong id="stateB">--</strong></p>
-    <div id="buttonB"></div> -->
-
     <p>LED RGB - Trạng thái: <strong id="stateC">--</strong></p>
     <div id="buttonC"></div>
+  </div>
+
+  <div class="card">
+    <h3>Chế độ đèn RGB</h3>
+
+    <label for="mode">Chọn chế độ:</label>
+    <select id="mode" onchange="setRGBMode(this.value)">
+      <option value="auto">Auto</option>
+      <option value="rainbow">Rainbow</option>
+      <option value="static">Static</option>
+    </select>
+
+    <div id="colorPickerContainer" style="margin-top: 10px; display: none;">
+      <label for="colorPicker">Chọn màu:</label>
+      <input type="color" id="colorPicker" value="#ff0000" onchange="sendColor()">
+    </div>
   </div>
 
   <div class="card">
@@ -146,8 +167,7 @@
     <p class="sensor-data">Độ ẩm đất: <strong id="soli">--</strong></p>
     <p class="sensor-data">Khoảng cách: <strong id="distance">--</strong></p>
     <p class="sensor-data">Ánh sáng: <strong id="lux">--</strong></p>
-
   </div>
 
 </body>
-</html> 
+</html>
