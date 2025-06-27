@@ -15,6 +15,8 @@
 #include <LiquidCrystal_I2C.h>
 #include <FS.h>
 #include <LittleFS.h>
+#include <AsyncTCP.h>
+#include <ESPAsyncWebServer.h>
 
 #include "../src/connect/TaskWifi.h"
 #include "../src/connect/TaskMQTT.h"

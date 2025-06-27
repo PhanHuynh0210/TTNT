@@ -17,5 +17,6 @@ extern void handleGPIOCOn();
 extern void handleRainbowMode();
 extern void handleAutoMode();
 extern void handleStaticMode();
+extern int PIN_NEO_PIXEL;
 
 #endif /* INC_TASKRGB_H_ */

@@ -1,6 +1,6 @@
 #include "TaskRGB.h"
 
-#define PIN_NEO_PIXEL  6   
+ int PIN_NEO_PIXEL = 6;   
 #define NUM_PIXELS     4  
 
 String outputRGBState = "off";
