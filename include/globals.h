@@ -17,6 +17,7 @@
 #include <LittleFS.h>
 #include <AsyncTCP.h>
 #include <ESPAsyncWebServer.h>
+#include <ElegantOTA.h>
 
 #include "../src/connect/TaskWifi.h"
 #include "../src/connect/TaskMQTT.h"

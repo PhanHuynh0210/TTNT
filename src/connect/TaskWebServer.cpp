@@ -1,6 +1,5 @@
 #include "TaskWebServer.h"
 
-// Create a web server object
 AsyncWebServer server(80);
 
 
@@ -144,14 +143,21 @@ void initWebServer() {
   server.serveStatic("/", LittleFS, "/").setDefaultFile("index.html");
   ws.onEvent(onWebSocketEvent);
   server.addHandler(&ws);
+  
+  ElegantOTA.begin(&server);    
+  
   server.begin();
   Serial.println("HTTP + WS server started");
+  Serial.println("OTA ready! Open http://<IP>/update to access OTA update page");
 }
 
 void loopWebServer() {
   static unsigned long lastTime = 0;
   if (millis() - lastTime > 2000) {
-    notifyAllClients();  // gửi dữ liệu cảm biến và LED
+    notifyAllClients(); 
     lastTime = millis();
   }
+  
+  // Handle ElegantOTA
+  ElegantOTA.loop();
 }

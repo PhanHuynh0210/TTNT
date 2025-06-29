@@ -2,7 +2,7 @@
 
 #define PinHumid 1
 
-int humidValue = 0;  // Lưu giá trị độ ẩm đất để dùng nếu cần
+int humidValue = 0; 
 
 int getHumid() {
     int raw = analogRead(PinHumid);
