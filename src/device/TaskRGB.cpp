@@ -3,7 +3,7 @@
  int PIN_NEO_PIXEL = 6;   
 #define NUM_PIXELS     4  
 
-String outputRGBState = "off";
+String LedRGB = "off";
 String rgbMode = "auto";
 int customRed = 255;
 int customGreen = 0;
@@ -11,7 +11,6 @@ int customBlue = 0;
 
 Adafruit_NeoPixel NeoPixel(NUM_PIXELS, PIN_NEO_PIXEL, NEO_GRB + NEO_KHZ800);
 
-// State cho auto & rainbow
 int autoIndex = 0;
 int rainbowIndex = 0;
 unsigned long lastUpdate = 0;
@@ -26,7 +25,7 @@ void TaskRGB(void *pvParameters)
 
     while (1)
     {
-        if (outputRGBState == "on") {
+        if (LedRGB == "on") {
             unsigned long now = millis();
 
             if (rgbMode == "auto" && now - lastUpdate > autoDelay) {
@@ -126,15 +125,6 @@ void setCustomColor(int r, int g, int b) {
   customRed = r;
   customGreen = g;
   customBlue = b;
-}
-
-void handleGPIOCOn() {
-  outputRGBState = "on";
-  handleRoot();
-}
-void handleGPIOCOff() {
-  outputRGBState = "off";
-  handleRoot();
 }
 
 void initRGB()

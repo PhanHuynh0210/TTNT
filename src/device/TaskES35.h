@@ -2,7 +2,7 @@
 #define INC_TASKES35_H_
 
 #include "globals.h"
-extern void initES35();  // Khởi tạo SN-300BYH-M Weather Station
-extern void getValueES35();  // Đọc dữ liệu từ SN-300BYH-M
+extern void initES35();  
+extern void getValueES35();  
 
 #endif /* INC_TASKES35_H_ */ 

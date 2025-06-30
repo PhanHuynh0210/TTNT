@@ -3,17 +3,9 @@
 
 #include "globals.h"
 
-// Assign output variables to GPIO pins
-extern int outputA;
-extern int outputB;
+extern int singleLed;
 
-extern String outputAState;
-extern String outputBState;
-
-extern void handleGPIOAOn();
-extern void handleGPIOAOff();
-extern void handleGPIOBOn();
-extern void handleGPIOBOff();
+extern String singleLedState;
 
 extern void initLED();
 

@@ -6,7 +6,6 @@
 LiquidCrystal_I2C lcd(33, 16, 2);
 int adcPins[] = {1, 2, 3, 4};
 
-// Task 1: Hiển thị Nhiệt độ & Độ ẩm
 void Task_LCDDHT(void *pvParameters) {
     unsigned long startTime = millis();
     char buffer[16];
@@ -33,7 +32,6 @@ void Task_LCDDHT(void *pvParameters) {
     vTaskDelete(NULL);
 }
 
-// Task 2: Hiển thị ADC
 void Task_LCDADC(void *pvParameters) {
     unsigned long startTime = millis();
     char temp[16];
@@ -60,7 +58,6 @@ void Task_LCDADC(void *pvParameters) {
    
 }
 
-// Task 3: Hiển thị Khoảng cách
 void TaskDisLCD(void *pvParameters) {
     unsigned long startTime = millis();
     lcd.clear();
@@ -71,20 +68,15 @@ void TaskDisLCD(void *pvParameters) {
 
         lcd.setCursor(0, 0);
         lcd.print("Distance:");
-
         lcd.setCursor(0, 1);
         snprintf(buffer, sizeof(buffer), "%d cm         ", discante);
         lcd.print(buffer);
-
         vTaskDelay(2000 / portTICK_PERIOD_MS);
     }
-
-    // Quay lại Task đầu tiên
     xTaskCreate(Task_LCDDHT, "Task_LCDDHT", 4096, NULL, 1, NULL);
     vTaskDelete(NULL);
 }
 
-// Hàm khởi tạo LCD và task đầu tiên
 void initLCD() {
     Wire.begin(MY_SCL, MY_SDA);
     lcd.init();

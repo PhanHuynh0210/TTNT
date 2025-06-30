@@ -1,8 +1,8 @@
 #include "TaskES35.h"
 
 #define BAUD_RATE_2 9600
-#define RXD_RS485 17  // Chân RX cho RS485 - thay đổi theo board của bạn
-#define TXD_RS485 10  // Chân TX cho RS485 - thay đổi theo board của bạn
+#define RXD_RS485 17  
+#define TXD_RS485 10 
 
 HardwareSerial RS485Serial(1);
 
@@ -19,7 +19,6 @@ void sendRS485Command(byte *command, int commandSize, byte *response, int respon
 
 void getValueES35()
 {
-    /*Đọc cảm biến nhiệt độ độ ẩm ES35*/
   float temperature, humidity;
   float sound = 0, pressure = 0, pm2p5 = 0, light = 0, pm10 = 0;
     byte soundRequest[] = {0x15, 0x03, 0x01, 0xF6, 0x00, 0x01, 0x66, 0xD0};
@@ -94,7 +93,6 @@ void getValueES35()
     humidity /= 10.0;
   }
 
-    // In ra Serial và publish qua MQTT
     Serial.println("Temperature: " + String(temperature, 1) + "°C, Humidity: " + String(humidity, 1) + "%");
     Serial.println("Pressure: " + String(pressure, 1) + " hPa, Light: " + String(light, 1) + " lux");
     Serial.println("PM2.5: " + String(pm2p5, 1) + " µg/m3, PM10: " + String(pm10, 1) + " µg/m3");
@@ -116,11 +114,7 @@ void TaskES35Sensor(void *pvParameters)
 
 void initES35()
 {
-    // Khởi tạo RS485 Serial
     RS485Serial.begin(BAUD_RATE_2, SERIAL_8N1, RXD_RS485, TXD_RS485);
-    
-    // Tạo task cho cảm biến ES35
     xTaskCreate(TaskES35Sensor, "TaskES35Sensor", 4096, NULL, 1, NULL);
-    
     Serial.println("ES35 RS485 Sensor initialized");
 } 

@@ -12,7 +12,7 @@ void setup()
   }
   initWebServer();
   // initDHT20();
-  initES35();  // Khởi tạo cảm biến ES35 RS485
+  initES35();  
   // initkc();
   // initLCD();
   // initRGB();

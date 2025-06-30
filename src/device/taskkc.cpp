@@ -1,23 +1,19 @@
 #include "taskkc.h"
 
-const int trig = 18;     // chân trig của HC-SR04
-const int echo = 21;     // chân echo của HC-SR04void test() 
+const int trig = 18;   
+const int echo = 21;   
 
 int test(){
-    unsigned long duration; // biến đo thời gian
-    int distance;           // biến lưu khoảng cách
+    unsigned long duration; 
+    int distance;         
     
-    /* Phát xung từ chân trig */
-    digitalWrite(trig,0);   // tắt chân trig
+    digitalWrite(trig,0);  
     delayMicroseconds(2);
-    digitalWrite(trig,1);   // phát xung từ chân trig
-    delayMicroseconds(5);   // xung có độ dài 5 microSeconds
-    digitalWrite(trig,0);   // tắt chân trig
+    digitalWrite(trig,1);   
+    delayMicroseconds(5);
+    digitalWrite(trig,0);   
     
-    /* Tính toán thời gian */
-    // Đo độ rộng xung HIGH ở chân echo. 
     duration = pulseIn(echo,HIGH);  
-    // Tính khoảng cách đến vật.
     distance = int(duration/2/29.412);
 
     // Serial.print(distance);
@@ -35,7 +31,7 @@ void kc(void *pvParameters)
 
 void initkc()
 {
-    pinMode(trig,OUTPUT);   // chân trig sẽ phát tín hiệu
+    pinMode(trig,OUTPUT);   
     pinMode(echo,INPUT); 
     xTaskCreate(kc, "kc", 4096, NULL, 1, NULL);
 }
