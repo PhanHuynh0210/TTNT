@@ -32,4 +32,6 @@
 #include "../src/device/TaskRelay.h"
 #include "../src/device/TaskHumid.h"
 #include "../src/device/TaskES35.h"
+#include "../src/device/Device.h"
+
 #endif
