@@ -8,5 +8,6 @@ extern int singleLed;
 extern String singleLedState;
 
 extern void initLED();
+extern void setSingleLedState(String state);
 
 #endif /* INC_TASKLED_H_ */

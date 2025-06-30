@@ -22,8 +22,7 @@ void handleWebSocketMessage(AsyncWebSocketClient *client, String msg) {
     char led = msg.charAt(10);
     String state = msg.substring(12);
     if (led == 'A') {
-      digitalWrite(singleLed, state == "on" ? HIGH : LOW);
-      singleLedState = state;
+      setSingleLedState(state);
     } else if (led == 'C') {
       digitalWrite(PIN_NEO_PIXEL, state == "on" ? LOW : HIGH);
       LedRGB = state;
