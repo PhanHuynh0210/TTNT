@@ -95,13 +95,7 @@
       // Đồng bộ chế độ RGB
       if (data.rgbMode) {
         document.getElementById('mode').value = data.rgbMode;
-        
-        // Hiển thị/ẩn color picker dựa trên chế độ
-        if (data.rgbMode === "static") {
-          document.getElementById("colorPickerContainer").style.display = "block";
-        } else {
-          document.getElementById("colorPickerContainer").style.display = "none";
-        }
+        updateColorPickerVisibility(data.rgbMode);
       }
 
       // Đồng bộ màu tùy chỉnh
@@ -118,13 +112,17 @@
     socket.send(`toggleLED:${led}:${state}`);
   }
 
-  function setRGBMode(mode) {
-    socket.send(`rgbMode:${mode}`);
+  function updateColorPickerVisibility(mode) {
     if (mode === "static") {
       document.getElementById("colorPickerContainer").style.display = "block";
     } else {
       document.getElementById("colorPickerContainer").style.display = "none";
     }
+  }
+
+  function setRGBMode(mode) {
+    socket.send(`rgbMode:${mode}`);
+    updateColorPickerVisibility(mode);
   }
 
   function sendColor() {
