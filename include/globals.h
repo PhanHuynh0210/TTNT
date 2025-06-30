@@ -31,5 +31,5 @@
 #include "../src/device/TaskLCD.h"
 #include "../src/device/TaskRelay.h"
 #include "../src/device/TaskHumid.h"
-
+#include "../src/device/TaskES35.h"
 #endif

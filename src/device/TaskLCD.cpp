@@ -29,7 +29,7 @@ void Task_LCDDHT(void *pvParameters) {
         vTaskDelay(2000 / portTICK_PERIOD_MS);
     }
 
-    xTaskCreate(Task_LCDADC, "Task_LCDADC", 2048, NULL, 1, NULL);
+    xTaskCreate(Task_LCDADC, "Task_LCDADC", 4096, NULL, 1, NULL);
     vTaskDelete(NULL);
 }
 
@@ -80,7 +80,7 @@ void TaskDisLCD(void *pvParameters) {
     }
 
     // Quay lại Task đầu tiên
-    xTaskCreate(Task_LCDDHT, "Task_LCDDHT", 2048, NULL, 1, NULL);
+    xTaskCreate(Task_LCDDHT, "Task_LCDDHT", 4096, NULL, 1, NULL);
     vTaskDelete(NULL);
 }
 
@@ -89,5 +89,5 @@ void initLCD() {
     Wire.begin(MY_SCL, MY_SDA);
     lcd.init();
     lcd.backlight();
-    xTaskCreate(Task_LCDDHT, "Task_LCDDHT", 2048, NULL, 1, NULL);
+    xTaskCreate(Task_LCDDHT, "Task_LCDDHT", 4096, NULL, 1, NULL);
 }

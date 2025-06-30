@@ -11,5 +11,5 @@ void TaskTemperatureHumidity(void *pvParameters)
 
 void setup()
 {
-xTaskCreate(TaskTemperatureHumidity, "Task_name", 2048, NULL, 1, NULL);
+xTaskCreate(TaskTemperatureHumidity, "Task_name", 4096, NULL, 1, NULL);
 }

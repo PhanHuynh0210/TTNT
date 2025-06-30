@@ -20,8 +20,8 @@ int test(){
     // Tính khoảng cách đến vật.
     distance = int(duration/2/29.412);
 
-    Serial.print(distance);
-    Serial.println("cm");
+    // Serial.print(distance);
+    // Serial.println("cm");
     return distance;
 }
 void kc(void *pvParameters)

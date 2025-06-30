@@ -11,13 +11,14 @@ void setup()
     return;
   }
   initWebServer();
-  initDHT20();
-  initkc();
-  initLCD();
-  initRGB();
-  initLED();
-  initLUX();
-  initFan();
+  // initDHT20();
+  initES35();  // Khởi tạo cảm biến ES35 RS485
+  // initkc();
+  // initLCD();
+  // initRGB();
+  // initLED();
+  // initLUX();
+  // initFan();
 }
 
 void loop()
