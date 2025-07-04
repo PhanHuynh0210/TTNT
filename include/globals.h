@@ -3,7 +3,6 @@
 
 #define delay_time 10000
 
-
 // include libraries
 #include <Wire.h>
 #include <WiFi.h>
@@ -21,6 +20,7 @@
 
 #include "../src/connect/TaskWifi.h"
 #include "../src/connect/TaskMQTT.h"
+#include "../src/connect/Task485.h"
 #include "../src/device/taskkc.h"
 #include "../src/device/TaskDHT20.h"
 #include "../src/connect/TaskWebServer.h"
@@ -33,5 +33,6 @@
 #include "../src/device/TaskHumid.h"
 #include "../src/device/TaskES35.h"
 #include "../src/device/Device.h"
+#include "../src/device/TaskJXBS.h"
 
 #endif
