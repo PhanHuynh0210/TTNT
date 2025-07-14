@@ -17,6 +17,8 @@
 #include <AsyncTCP.h>
 #include <ESPAsyncWebServer.h>
 #include <ElegantOTA.h>
+#include <Preferences.h> 
+
 
 #include "../src/connect/TaskWifi.h"
 #include "../src/connect/TaskMQTT.h"
@@ -34,5 +36,6 @@
 #include "../src/device/TaskES35.h"
 #include "../src/device/Device.h"
 #include "../src/device/TaskJXBS.h"
+#include "../src/connect/TaskAccesspoint.h"
 
 #endif

@@ -1,10 +1,10 @@
 #include "Device.h"
 
 void initDevice(){
-    // initWebServer();
+    initWebServer();
     // initDHT20();
     // initES35();  
-    initJXBS();
+    // initJXBS();
     // initkc();
     // initLCD();
     // initRGB();
