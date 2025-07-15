@@ -5,31 +5,31 @@ void setup()
 {
   Serial.begin(115200);
   InitWiFi();      
-    if (WiFi.status() != WL_CONNECTED) {
-    Serial.println("WiFi connection failed, starting Access Point mode...");
+  if (WiFi.status() != WL_CONNECTED) {
     initAP();
   } else {
-    Serial.println("WiFi connected successfully, starting services...");
     initMQTT();    
     initWebServer();
   }
-  
-  initDevice(); 
-  Serial.println("=== Setup Complete ===");
+    initDevice(); 
 }
 
 void loop()
 {
-  if (!Wifi_reconnect())
-  {
-    if (WiFi.getMode() != WIFI_AP) {
-      Serial.println("WiFi connection lost, starting Access Point...");
-      initAP();
-    }
-  } else {
+  if (WiFi.status() == WL_CONNECTED) {
     reconnectMQTT();   
     loopWebServer();   
+  } else {
+    if (!Wifi_reconnect()) {
+      if (WiFi.getMode() != WIFI_AP) {
+        initAP();
+      }
+    } else {
+      if (WiFi.getMode() != WIFI_STA) {
+        initMQTT();
+        initWebServer();
+      }
+    }
   }
   accpoint();
-  delay(100);
 }
