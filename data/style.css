@@ -29,6 +29,16 @@ h1 {
 .button2 {
   background: #888;
 }
+.button-warning {
+  background: #ff9800 !important;
+}
+.button-warning:hover {
+  background: #f57c00 !important;
+}
+.button:disabled {
+  background: #ccc !important;
+  cursor: not-allowed;
+}
 select, input[type="color"] {
   padding: 8px;
   font-size: 16px;

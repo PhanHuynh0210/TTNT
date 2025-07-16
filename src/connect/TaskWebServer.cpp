@@ -80,6 +80,21 @@ void handleLEDCControl(String msg) {
   }
 }
 
+void handleAPModeSwitch(AsyncWebSocketClient *client) {
+  Serial.println("Received request to switch to AP mode");
+  JsonDocument doc;
+  doc["action"] = "switchToAP";
+  doc["apUrl"] = "http://192.168.4.1:90";
+  doc["message"] = "Switching to Access Point mode...";
+  
+  String response;
+  serializeJson(doc, response);
+  client->text(response);
+  delay(500);
+  
+  forceAPMode();
+}
+
 void handleWebSocketMessage(AsyncWebSocketClient *client, String msg) {
   if (msg.startsWith("toggleLED:")) {
     char led = msg.charAt(10);
@@ -90,6 +105,8 @@ void handleWebSocketMessage(AsyncWebSocketClient *client, String msg) {
     }
   } else if (msg.startsWith("rgbMode:") || msg.startsWith("setColor:")) {
     handleLEDCControl(msg);
+  } else if (msg == "switchToAP") {
+    handleAPModeSwitch(client);
   }
 }
 

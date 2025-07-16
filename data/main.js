@@ -50,6 +50,15 @@ socket.onmessage = (event) => {
     const b = data.customB.toString(16).padStart(2, '0');
     document.getElementById('colorPicker').value = `#${r}${g}${b}`;
   }
+
+  // Handle AP mode switch response
+  if (data.action === 'switchToAP' && data.apUrl) {
+    alert('Đang chuyển sang chế độ Access Point...');
+    // Redirect to Access Point URL after a short delay
+    setTimeout(() => {
+      window.location.href = data.apUrl;
+    }, 2000);
+  }
 };
 
 function toggleLED(led, state) {
@@ -72,4 +81,14 @@ document.getElementById('colorPicker').addEventListener('input', function() {
   const g = parseInt(color.substr(3, 2), 16);
   const b = parseInt(color.substr(5, 2), 16);
   socket.send(`setColor:${r},${g},${b}`);
+});
+
+// Add event listener for AP mode switch button
+document.getElementById('btnSwitchAP').addEventListener('click', function() {
+  const confirmed = confirm('Bạn có chắc chắn muốn chuyển sang chế độ Access Point? Điều này sẽ ngắt kết nối WiFi hiện tại.');
+  if (confirmed) {
+    socket.send('switchToAP');
+    this.disabled = true;
+    this.textContent = 'Đang chuyển...';
+  }
 });

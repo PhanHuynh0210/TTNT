@@ -4,7 +4,6 @@
 void setup()
 {
   Serial.begin(115200);
-  // clearWiFiSettings();
   InitWiFi();      
   if (WiFi.status() != WL_CONNECTED) {
     initAP();

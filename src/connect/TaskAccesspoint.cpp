@@ -155,3 +155,13 @@ void accpoint() {
     Serial.println("Client disconnected from AP.");
   }
 }
+
+void forceAPMode() {
+  Serial.println("Force switching to Access Point mode...");
+  clearWiFiSettings();
+  WiFi.disconnect(true);
+  delay(1000);
+  apMode = false;
+  initAP();
+  Serial.println("Forced switch to AP mode completed");
+}

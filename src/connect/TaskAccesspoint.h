@@ -5,5 +5,6 @@
 
 extern void initAP();
 extern void accpoint();
+extern void forceAPMode();
 
 #endif // TASKACCESSPOINT_H
