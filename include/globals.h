@@ -18,6 +18,8 @@
 #include <ESPAsyncWebServer.h>
 #include <ElegantOTA.h>
 #include <Preferences.h> 
+#include <ArduinoJson.h> 
+
 
 
 #include "../src/connect/TaskWifi.h"

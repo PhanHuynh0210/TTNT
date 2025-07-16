@@ -1,159 +1,30 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="icon" href="data:,">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ESP32 Web Server</title>
+
   <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
-  <style>
-    body {
-      font-family: 'Roboto', sans-serif;
-      background-color: #f2f2f2;
-      text-align: center;
-      margin: 0;
-      padding: 20px;
-    }
-
-    h1 {
-      color: #333;
-    }
-
-    .button {
-      background-color: #4CAF50;
-      border: none;
-      color: white;
-      padding: 12px 28px;
-      font-size: 20px;
-      margin: 5px;
-      cursor: pointer;
-      border-radius: 6px;
-    }
-
-    .button2 {
-      background-color: #888;
-    }
-
-    .card {
-      background-color: white;
-      border-radius: 10px;
-      padding: 20px;
-      margin: 15px auto;
-      max-width: 400px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-    }
-
-    .sensor-data {
-      font-size: 18px;
-      margin: 8px 0;
-    }
-
-    form input[type="number"] {
-      padding: 8px;
-      font-size: 16px;
-      width: 80px;
-    }
-
-    form input[type="submit"] {
-      padding: 8px 16px;
-      font-size: 16px;
-      cursor: pointer;
-    }
-  </style>
-
-<script>
-  const socket = new WebSocket(`ws://${location.host}/ws`);
-
-  socket.onopen = () => {
-    console.log("WebSocket connected");
-  };
-
-  socket.onmessage = (event) => {
-    const data = JSON.parse(event.data);
-
-    if (data.type === "sensor") {
-      document.getElementById('temp').textContent = data.Temp + " °C";
-      document.getElementById('humid').textContent = data.Humid + " %";
-      document.getElementById('soli').textContent = data.Soli + " %";
-      document.getElementById('distance').textContent = data.Distance + " cm";
-      document.getElementById('lux').textContent = data.Lux + " lux";
-
-      document.getElementById('stateA').textContent = data.A;
-      document.getElementById('stateC').textContent = data.C;
-
-      document.getElementById('buttonA').innerHTML =
-        `<button class="button ${data.A === 'on' ? 'button2' : ''}" 
-          onclick="toggleLED('A', '${data.A === 'on' ? 'off' : 'on'}')">
-          ${data.A === 'on' ? 'OFF' : 'ON'}
-        </button>`;
-
-      document.getElementById('buttonC').innerHTML =
-        `<button class="button ${data.C === 'on' ? 'button2' : ''}" 
-          onclick="toggleLED('C', '${data.C === 'on' ? 'off' : 'on'}')">
-          ${data.C === 'on' ? 'OFF' : 'ON'}
-        </button>`;
-
-      // Đồng bộ chế độ RGB
-      if (data.rgbMode) {
-        document.getElementById('mode').value = data.rgbMode;
-        updateColorPickerVisibility(data.rgbMode);
-      }
-
-      // Đồng bộ màu tùy chỉnh
-      if (data.customR !== undefined && data.customG !== undefined && data.customB !== undefined) {
-        const r = data.customR.toString(16).padStart(2, '0');
-        const g = data.customG.toString(16).padStart(2, '0');
-        const b = data.customB.toString(16).padStart(2, '0');
-        document.getElementById('colorPicker').value = `#${r}${g}${b}`;
-      }
-    }
-  };
-
-  function toggleLED(led, state) {
-    socket.send(`toggleLED:${led}:${state}`);
-  }
-
-  function updateColorPickerVisibility(mode) {
-    if (mode === "static") {
-      document.getElementById("colorPickerContainer").style.display = "block";
-    } else {
-      document.getElementById("colorPickerContainer").style.display = "none";
-    }
-  }
-
-  function setRGBMode(mode) {
-    socket.send(`rgbMode:${mode}`);
-    updateColorPickerVisibility(mode);
-  }
-
-  function sendColor() {
-    const color = document.getElementById("colorPicker").value;
-    const r = parseInt(color.substr(1, 2), 16);
-    const g = parseInt(color.substr(3, 2), 16);
-    const b = parseInt(color.substr(5, 2), 16);
-    socket.send(`setColor:${r},${g},${b}`);
-  }
-</script>
-
+  <link rel="stylesheet" href="style.css" />
 
 </head>
 <body>
-
   <h1>ESP32 Web Server</h1>
 
   <div class="card">
     <h3>Điều khiển đèn</h3>
-    <p>LED Đơn - Trạng thái: <strong id="stateA">--</strong></p>
-    <div id="buttonA"></div>
+    <p>LED Đơn: <strong id="stateA">--</strong></p>
+    <button id="btnA" class="button">ON</button>
 
-    <p>LED RGB - Trạng thái: <strong id="stateC">--</strong></p>
-    <div id="buttonC"></div>
+    <p>LED RGB: <strong id="stateC">--</strong></p>
+    <button id="btnC" class="button">ON</button>
   </div>
 
   <div class="card">
-    <h3>Chế độ đèn RGB</h3>
-
+    <h3>Chế độ RGB</h3>
     <label for="mode">Chọn chế độ:</label>
-    <select id="mode" onchange="setRGBMode(this.value)">
+    <select id="mode">
       <option value="auto">Auto</option>
       <option value="rainbow">Rainbow</option>
       <option value="static">Static</option>
@@ -161,18 +32,21 @@
 
     <div id="colorPickerContainer" style="margin-top: 10px; display: none;">
       <label for="colorPicker">Chọn màu:</label>
-      <input type="color" id="colorPicker" value="#ff0000" onchange="sendColor()">
+      <input type="color" id="colorPicker" value="#ff0000">
     </div>
   </div>
 
   <div class="card">
-    <h3>Cảm biến</h3>
+    <h3>Dữ liệu cảm biến</h3>
     <p class="sensor-data">Nhiệt độ: <strong id="temp">--</strong></p>
     <p class="sensor-data">Độ ẩm không khí: <strong id="humid">--</strong></p>
     <p class="sensor-data">Độ ẩm đất: <strong id="soli">--</strong></p>
     <p class="sensor-data">Khoảng cách: <strong id="distance">--</strong></p>
     <p class="sensor-data">Ánh sáng: <strong id="lux">--</strong></p>
+
   </div>
+
+  <script src="main.js"></script>
 
 </body>
 </html>

@@ -3,21 +3,38 @@
 AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
 
+float lastTemp = -999, lastHumid = -999, lastSoli = -999, lastDistance = -999, lastLux = -999;
+String lastLedA = "";
+String lastLedC = "";
+String lastRGBMode = "";
+int lastCustomR = -1, lastCustomG = -1, lastCustomB = -1;
+
 String createStatusJSON() {
-  String json = "{";
-  json += "\"type\":\"sensor\",";
-  json += "\"Temp\":" + String(dht20.getTemperature()) + ",";
-  json += "\"Humid\":" + String(dht20.getHumidity()) + ",";
-  json += "\"Soli\":" + String(getHumid()) + ",";
-  json += "\"Distance\":" + String(test()) + ",";
-  json += "\"Lux\":" + String(getValueLux()) + ",";
-  json += "\"A\":\"" + singleLedState + "\",";
-  json += "\"C\":\"" + LedRGB + "\",";
-  json += "\"rgbMode\":\"" + rgbMode + "\",";
-  json += "\"customR\":" + String(customRed) + ",";
-  json += "\"customG\":" + String(customGreen) + ",";
-  json += "\"customB\":" + String(customBlue);
-  json += "}";
+  JsonDocument doc;
+  
+
+  float temp = round(dht20.getTemperature() * 10) / 10.0;
+  float humid = round(dht20.getHumidity() * 10) / 10.0;
+  float soli = getHumid();
+  float distance = test();
+  float lux = getValueLux();
+
+  doc["type"] = "sensor";
+  doc["Temp"] = temp;
+  doc["Humid"] = humid;
+  doc["Soli"] = soli;
+  doc["Distance"] = distance;
+  doc["Lux"] = lux;
+
+  doc["A"] = singleLedState;
+  doc["C"] = LedRGB;
+  doc["rgbMode"] = rgbMode;
+  doc["customR"] = customRed;
+  doc["customG"] = customGreen;
+  doc["customB"] = customBlue;
+
+  String json;
+  serializeJson(doc, json);
   return json;
 }
 
@@ -31,7 +48,7 @@ void handleLEDAControl(String msg) {
     String state = msg.substring(12);
     if (led == 'A') {
       setSingleLedState(state);
-      notifyAllClients();
+      ws.textAll("{\"A\":\"" + singleLedState + "\"}");
     }
   }
 }
@@ -43,17 +60,23 @@ void handleLEDCControl(String msg) {
     if (led == 'C') {
       digitalWrite(PIN_NEO_PIXEL, state == "on" ? LOW : HIGH);
       LedRGB = state;
-      notifyAllClients();
+      ws.textAll("{\"C\":\"" + LedRGB + "\"}");
     }
   } else if (msg.startsWith("rgbMode:")) {
     String mode = msg.substring(8);
     setRGBMode(mode);
-    notifyAllClients();
+    ws.textAll("{\"rgbMode\":\"" + mode + "\"}");
   } else if (msg.startsWith("setColor:")) {
     int r, g, b;
     sscanf(msg.c_str(), "setColor:%d,%d,%d", &r, &g, &b);
     setCustomColor(r, g, b);
-    notifyAllClients();
+    JsonDocument doc;
+    doc["customR"] = r;
+    doc["customG"] = g; 
+    doc["customB"] = b;
+    String json;
+    serializeJson(doc, json);
+    ws.textAll(json);
   }
 }
 
@@ -91,10 +114,10 @@ void initWebServer() {
   server.serveStatic("/", LittleFS, "/").setDefaultFile("index.html");
   ws.onEvent(onWebSocketEvent);
   server.addHandler(&ws);
-  
-  ElegantOTA.begin(&server);    
-  
+
+  ElegantOTA.begin(&server);
   server.begin();
+
   Serial.println("HTTP + WS server started");
   Serial.println("OTA ready! Open http://<IP>/update to access OTA update page");
 }
@@ -102,9 +125,35 @@ void initWebServer() {
 void loopWebServer() {
   static unsigned long lastTime = 0;
   if (millis() - lastTime > 2000) {
-    notifyAllClients(); 
+    float temp = round(dht20.getTemperature() * 10) / 10.0;
+    float humid = round(dht20.getHumidity() * 10) / 10.0;
+    float soli = getHumid();
+    float distance = test();
+    float lux = getValueLux();
+
+    bool changed = false;
+
+    if (abs(temp - lastTemp) > 0.2) { lastTemp = temp; changed = true; }
+    if (abs(humid - lastHumid) > 0.2) { lastHumid = humid; changed = true; }
+    if (abs(soli - lastSoli) > 0.2) { lastSoli = soli; changed = true; }
+    if (abs(distance - lastDistance) > 1) { lastDistance = distance; changed = true; }
+    if (abs(lux - lastLux) > 1) { lastLux = lux; changed = true; }
+
+    if (singleLedState != lastLedA) { lastLedA = singleLedState; changed = true; }
+    if (LedRGB != lastLedC) { lastLedC = LedRGB; changed = true; }
+    if (rgbMode != lastRGBMode) { lastRGBMode = rgbMode; changed = true; }
+    if (customRed != lastCustomR || customGreen != lastCustomG || customBlue != lastCustomB) {
+      lastCustomR = customRed; lastCustomG = customGreen; lastCustomB = customBlue;
+      changed = true;
+    }
+
+    if (changed) {
+      notifyAllClients();
+    }
+
     lastTime = millis();
   }
-  
+
+  ws.cleanupClients();
   ElegantOTA.loop();
 }
