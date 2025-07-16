@@ -8,7 +8,7 @@ void initDevice(){
     // initkc();
     // initLCD();
     // initRGB();
-    // initLED();
+     initLED();
     // initLUX();
     // initFan();
 }

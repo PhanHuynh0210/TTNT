@@ -4,6 +4,7 @@
 void setup()
 {
   Serial.begin(115200);
+  // clearWiFiSettings();
   InitWiFi();      
   if (WiFi.status() != WL_CONNECTED) {
     initAP();
@@ -20,12 +21,13 @@ void loop()
     reconnectMQTT();   
     loopWebServer();   
   } else {
-    if (!Wifi_reconnect()) {
-      if (WiFi.getMode() != WIFI_AP) {
-        initAP();
-      }
-    } else {
-      if (WiFi.getMode() != WIFI_STA) {
+    if (WiFi.getMode() != WIFI_AP && WiFi.getMode() != WIFI_AP_STA) {
+      initAP();
+    }
+    static unsigned long lastReconnectAttempt = 0;
+    if (millis() - lastReconnectAttempt > 30000) { 
+      lastReconnectAttempt = millis();
+      if (Wifi_reconnect() && WiFi.status() == WL_CONNECTED) {
         initMQTT();
         initWebServer();
       }

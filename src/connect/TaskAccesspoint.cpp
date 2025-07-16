@@ -10,16 +10,28 @@ String header;
 bool apMode = false;
 
 void initAP() {
-  
+  if (apMode && WiFi.getMode() == WIFI_AP) {
+    return;
+  }
   preferences.begin("wifi-config", false);
+  WiFi.disconnect(true);
+  delay(1000);
   WiFi.mode(WIFI_AP);
-  WiFi.softAP(ap_ssid, ap_password);
+  bool apStarted = WiFi.softAP(ap_ssid, ap_password);
   
-  Serial.print("AP IP: ");
-  Serial.println(WiFi.softAPIP());
-  
-  apServer.begin();
-  apMode = true;
+  if (apStarted) {
+    Serial.println("Access Point started successfully!");
+    Serial.print("AP SSID: ");
+    Serial.println(ap_ssid);
+    Serial.print("AP Password: ");
+    Serial.println(ap_password);
+    Serial.println("http://192.168.4.1:90");
+    apServer.begin();
+    apMode = true;
+  } else {
+    Serial.println(" Failed to start Access Point!");
+    apMode = false;
+  }
 }
 
 void accpoint() {
@@ -39,114 +51,96 @@ void accpoint() {
 
         if (c == '\n') {
           if (currentLine.length() == 0) {
-            // Parse nếu có tham số GET ?ssid=...&pass=...
             if (header.indexOf("GET /?ssid=") >= 0) {
               int ssidIndex = header.indexOf("ssid=") + 5;
               int passIndex = header.indexOf("&pass=");
               String ssid = header.substring(ssidIndex, passIndex);
               String pass = header.substring(passIndex + 6, header.indexOf("HTTP") - 1);
 
-              ssid.replace("%20", " "); // Nếu tên Wi-Fi có dấu cách
+              ssid.replace("%20", " ");
 
               Serial.println("Received WiFi credentials:");
               Serial.println("SSID: " + ssid);
               Serial.println("PASS: " + pass);
 
-              // Lưu vào Preferences
               preferences.putString("ssid", ssid);
               preferences.putString("pass", pass);
               Serial.println("WiFi credentials saved to flash memory.");
 
-              // Thử kết nối với WiFi mới
+              WiFi.disconnect(true); 
+              delay(1000);
+              
               WiFi.mode(WIFI_STA);
               WiFi.begin(ssid.c_str(), pass.c_str());
               Serial.println("Attempting to connect to new WiFi...");
+              Serial.println("SSID: " + ssid);
 
               unsigned long startAttemptTime = millis();
-              while (WiFi.status() != WL_CONNECTED && millis() - startAttemptTime < 10000) {
-                delay(100);
+              int dotCount = 0;
+              while (WiFi.status() != WL_CONNECTED && millis() - startAttemptTime < 15000) {
+                delay(500);
                 Serial.print(".");
+                dotCount++;
+                if (dotCount % 20 == 0) {
+                  Serial.println(); 
+                  Serial.println("WiFi Status: " + String(WiFi.status()));
+                }
               }
 
               if (WiFi.status() == WL_CONNECTED) {
-                Serial.println("\nSuccessfully connected to new WiFi!");
-                Serial.println("IP Address: " + WiFi.localIP().toString());
-                apMode = false; // Tắt AP mode khi đã kết nối WiFi
-                
-                // Gửi response thành công
-                client.println("HTTP/1.1 200 OK");
-                client.println("Content-type:text/html");
-                client.println();
-                client.println("<!DOCTYPE html><html>");
-                client.println("<head><meta charset='UTF-8'>");
-                client.println("<style>body{font-family:Arial;margin:40px;color:green;} h1{color:#007cba;}</style>");
-                client.println("</head><body>");
-                client.println("<h1>✅ WiFi Connected Successfully!</h1>");
-                client.println("<p><strong>IP Address:</strong> " + WiFi.localIP().toString() + "</p>");
-                client.println("<p>Device is now connected to your WiFi network.</p>");
-                client.println("<p>You can disconnect from the ESP32_Config hotspot.</p>");
-                client.println("</body></html>");
-                client.println();
-                break;
+                  Serial.println("\n Successfully connected to new WiFi!");
+                  String staIP = WiFi.localIP().toString();
+                  Serial.println("IP Address: " + staIP);
+
+                  client.println("HTTP/1.1 302 Found");
+                  client.print("Location: http://");
+                  client.print(staIP);
+                  client.println("/"); 
+                  client.println("Connection: close");
+                  client.println();
+                  client.println("<!DOCTYPE html><html><body>");
+                  client.println("<h1>Redirecting...</h1>");
+                  client.println("</body></html>");
+                  client.flush();
+                  delay(1000);
+
+                  apMode = false;
+                  break;
               } else {
-                Serial.println("\nFailed to connect to new WiFi!");
-                // Quay lại AP mode nếu kết nối thất bại
+                Serial.println("\n Failed to connect to new WiFi!");
+                Serial.println("Final WiFi Status: " + String(WiFi.status()));
+                WiFi.disconnect(true);
+                delay(1000);
                 WiFi.mode(WIFI_AP);
                 WiFi.softAP(ap_ssid, ap_password);
-                
-                // Gửi response lỗi
-                client.println("HTTP/1.1 200 OK");
-                client.println("Content-type:text/html");
-                client.println();
-                client.println("<!DOCTYPE html><html>");
-                client.println("<head><meta charset='UTF-8'>");
-                client.println("<style>body{font-family:Arial;margin:40px;color:red;} h1{color:#d32f2f;}</style>");
-                client.println("</head><body>");
-                client.println("<h1>❌ WiFi Connection Failed!</h1>");
-                client.println("<p>Could not connect to the WiFi network.</p>");
-                client.println("<p>Please check your credentials and try again.</p>");
-                client.println("<a href='/'>Go Back</a>");
-                client.println("</body></html>");
-                client.println();
+                Serial.println("Switched back to AP mode");
                 break;
               }
             }
-
-            // Gửi trang web form cấu hình
             client.println("HTTP/1.1 200 OK");
             client.println("Content-type:text/html");
             client.println();
-            client.println("<!DOCTYPE html><html>");
-            client.println("<head><meta charset='UTF-8'>");
+
+            client.println("<!DOCTYPE html><html><head><meta charset='UTF-8'>");
             client.println("<title>ESP32 WiFi Setup</title>");
             client.println("<style>");
-            client.println("body{font-family:Arial,sans-serif;margin:40px;background:#f5f5f5;}");
-            client.println(".container{background:white;padding:30px;border-radius:10px;box-shadow:0 2px 10px rgba(0,0,0,0.1);max-width:400px;margin:0 auto;}");
-            client.println("h1{color:#007cba;text-align:center;margin-bottom:30px;}");
-            client.println("input{padding:12px;margin:8px 0;width:100%;border:2px solid #ddd;border-radius:5px;box-sizing:border-box;}");
-            client.println("button{padding:15px;width:100%;background:#007cba;color:white;border:none;border-radius:5px;cursor:pointer;font-size:16px;margin-top:10px;}");
+            client.println("body{font-family:Arial,sans-serif;background:#f5f5f5;padding:20px;}");
+            client.println(".box{background:#fff;padding:20px;border-radius:8px;max-width:400px;margin:auto;box-shadow:0 0 10px rgba(0,0,0,0.1);}");
+            client.println("h2{text-align:center;color:#007cba;}");
+            client.println("input,button{width:100%;padding:12px;margin:8px 0;box-sizing:border-box;border-radius:5px;border:1px solid #ccc;}");
+            client.println("button{background:#007cba;color:white;border:none;cursor:pointer;}");
             client.println("button:hover{background:#005a87;}");
-            client.println(".info{background:#e3f2fd;padding:15px;border-radius:5px;margin-bottom:20px;border-left:4px solid #007cba;}");
-            client.println("</style>");
-            client.println("</head><body>");
-            client.println("<div class='container'>");
-            client.println("<h1>🛜 ESP32 WiFi Setup</h1>");
-            client.println("<div class='info'>");
-            client.println("<strong>Instructions:</strong><br>");
-            client.println("1. Enter your WiFi network name (SSID)<br>");
-            client.println("2. Enter your WiFi password<br>");
-            client.println("3. Click Connect to save and connect");
-            client.println("</div>");
+            client.println("</style></head><body>");
+            client.println("<div class='box'>");
+            client.println("<h2>ESP32 WiFi Setup</h2>");
             client.println("<form action='/'>");
-            client.println("<label>WiFi Network Name (SSID):</label>");
-            client.println("<input type='text' name='ssid' placeholder='Enter WiFi Name' required>");
-            client.println("<label>WiFi Password:</label>");
-            client.println("<input type='password' name='pass' placeholder='Enter WiFi Password'>");
-            client.println("<button type='submit'>🔗 Connect to WiFi</button>");
-            client.println("</form>");
-            client.println("</div>");
+            client.println("<input name='ssid' placeholder='WiFi SSID' required>");
+            client.println("<input name='pass' type='password' placeholder='WiFi Password'>");
+            client.println("<button type='submit'>Connect</button>");
+            client.println("</form></div>");
             client.println("</body></html>");
             client.println();
+
             break;
           } else {
             currentLine = "";
