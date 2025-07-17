@@ -2,7 +2,8 @@
 
 void initDevice(){
     initWebServer();
-    // initDHT20();
+    initDHT20();
+    initGGsheet();
     // initES35();  
     // initJXBS();
     // initkc();
