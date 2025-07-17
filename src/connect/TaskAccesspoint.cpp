@@ -129,26 +129,27 @@ void accpoint() {
                 break;
               }
             }
-            // Handle MQTT configuration
-            else if (header.indexOf("GET /mqtt?username=") >= 0) {
-              // Parse MQTT settings
-              int usernameIndex = header.indexOf("username=") + 9;
+            else if (header.indexOf("GET /mqtt?server=") >= 0) {
+              int serverIndex = header.indexOf("server=") + 7;
+              int usernameIndex = header.indexOf("&username=") + 10;
               int keyIndex = header.indexOf("&key=");
               int httpIndex = header.indexOf("HTTP");
               
+              String server = header.substring(serverIndex, usernameIndex - 10);
               String username = header.substring(usernameIndex, keyIndex);
               String key = header.substring(keyIndex + 5, httpIndex - 1);
               
-              // URL decode spaces
+              server.replace("%20", " ");
+              server.replace("%3A", ":");
               username.replace("%20", " ");
               key.replace("%20", " ");
 
               Serial.println("Received MQTT settings:");
+              Serial.println("Server: " + server);
               Serial.println("Username: " + username);
               Serial.println(String("Key: ") + (key.length() > 0 ? "****" : "empty"));
 
-              // Save MQTT settings
-              saveMQTTSettings(username, key);
+              saveMQTTSettings(server, username, key);
               
               // Send success response
               client.println("HTTP/1.1 200 OK");
@@ -185,14 +186,11 @@ void accpoint() {
             client.println(".highlight{background:#fff3cd;border:1px solid #ffeaa7;padding:10px;border-radius:5px;margin-bottom:15px;}");
             client.println("</style></head><body>");
             client.println("<div class='container'>");
-            client.println("<h1>🔧 ESP32 Configuration Center</h1>");
+            client.println("<h1>ESP32 Configuration</h1>");
             
-            client.println("<div class='highlight'>");
-            client.println("<strong>📍 Chú ý:</strong> Đây là nơi duy nhất để cấu hình WiFi và MQTT cho thiết bị ESP32 của bạn.");
-            client.println("</div>");
             
             client.println("<div class='card'>");
-            client.println("<h2>📶 WiFi Settings</h2>");
+            client.println("<h2>WiFi Settings</h2>");
             client.println("<form action='/wifi'>");
             client.println("<input name='ssid' placeholder='WiFi SSID' required>");
             client.println("<input name='pass' type='password' placeholder='WiFi Password'>");
@@ -200,13 +198,20 @@ void accpoint() {
             client.println("</form>");
             client.println("</div>");
             
+            String currentServer = getCurrentMQTTServer();
+            String currentUsername = getCurrentMQTTUsername();
             client.println("<div class='card'>");
-            client.println("<h2>📡 MQTT Settings</h2>");
+            client.println("<h2>MQTT Settings</h2>");
             client.println("<div class='mqtt-info'>");
-            client.println("<strong>ℹ️ Thông tin:</strong> Cấu hình MQTT chỉ có thể thực hiện tại đây (Access Point mode)<br>");
-            client.println("Server và Port sử dụng mặc định: <strong>io.adafruit.com:1883</strong>");
+            client.println("<strong>Cấu hình hiện tại:</strong><br>");
+            client.println("Server: " + currentServer + "<br>");
+            client.println("Username: " + (currentUsername.length() > 0 ? currentUsername : "Chưa cấu hình"));
             client.println("</div>");
+            
+
             client.println("<form action='/mqtt'>");
+            client.println("<input name='server' placeholder='MQTT Server (vd: io.adafruit.com)' value='io.adafruit.com' required>");
+            client.println("<div class='note'>Mặc định: io.adafruit.com (port 1883)</div>");
             client.println("<input name='username' placeholder='MQTT Username' required>");
             client.println("<input name='key' type='password' placeholder='MQTT Key/Password' required>");
             client.println("<button type='submit'>Save MQTT Settings</button>");
