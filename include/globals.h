@@ -19,6 +19,8 @@
 #include <ElegantOTA.h>
 #include <Preferences.h> 
 #include <ArduinoJson.h> 
+#include "time.h"
+#include <ESP_Google_Sheet_Client.h>
 
 
 
@@ -39,5 +41,6 @@
 #include "../src/device/Device.h"
 #include "../src/device/TaskJXBS.h"
 #include "../src/connect/TaskAccesspoint.h"
+#include "../src/connect/TaskGGsheet.h"
 
 #endif
