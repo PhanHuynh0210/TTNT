@@ -1,14 +1,52 @@
 
 #include "TaskMQTT.h"
 
-#define MQTT_SERVER "io.adafruit.com"
-#define MQTT_PORT 1883
+Preferences mqttPrefs;
 
+String MQTT_SERVER = "io.adafruit.com";
+int MQTT_PORT = 1883;
 String IO_USERNAME = "huynh0210";
 String IO_KEY = "";
 
 WiFiClient espClient;
 PubSubClient client(espClient);
+
+void loadMQTTSettings() {
+    mqttPrefs.begin("mqtt-config", true);
+    
+    IO_USERNAME = mqttPrefs.getString("username", "");
+    IO_KEY = mqttPrefs.getString("key", "");
+    
+    mqttPrefs.end();
+
+    Serial.println("MQTT Settings loaded:");
+    Serial.println("Username: " + IO_USERNAME);
+    Serial.println(String("Key: ") + (IO_KEY.length() > 0 ? "****" : "empty"));
+}
+
+void saveMQTTSettings(String username, String key) {
+    mqttPrefs.begin("mqtt-config", false);
+    
+    mqttPrefs.putString("username", username);
+    mqttPrefs.putString("key", key);
+    
+    mqttPrefs.end();
+    
+    Serial.println("MQTT settings saved to flash memory.");
+    
+    IO_USERNAME = username;
+    IO_KEY = key;
+}
+
+void clearMQTTSettings() {
+    Serial.println("Clearing saved MQTT settings...");
+    
+    mqttPrefs.begin("mqtt-config", false);
+    mqttPrefs.clear();
+    mqttPrefs.end();
+    
+    Serial.println("MQTT settings cleared successfully!");
+}
 
 void callback(char *topic, byte *payload, unsigned int length)
 {
@@ -70,6 +108,17 @@ void reconnectMQTT()
 
 void initMQTT()
 {
-    client.setServer(MQTT_SERVER, MQTT_PORT);
+    // Load settings from preferences first
+    loadMQTTSettings();
+    
+    client.setServer(MQTT_SERVER.c_str(), MQTT_PORT);
     client.setCallback(callback);
+}
+
+String getCurrentMQTTUsername() {
+    return IO_USERNAME;
+}
+
+bool isMQTTConnected() {
+    return client.connected();
 }

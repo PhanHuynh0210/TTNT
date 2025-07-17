@@ -6,5 +6,10 @@
 void initMQTT();
 void reconnectMQTT();
 void publishData(String feed, String data);
+void loadMQTTSettings();
+void saveMQTTSettings(String username, String key);
+void clearMQTTSettings();
+String getCurrentMQTTUsername();
+bool isMQTTConnected();
 
 #endif /* INC_TASKMQTT_H_ */

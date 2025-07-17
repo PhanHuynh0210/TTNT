@@ -51,11 +51,12 @@ void accpoint() {
 
         if (c == '\n') {
           if (currentLine.length() == 0) {
-            if (header.indexOf("GET /?ssid=") >= 0) {
+            if (header.indexOf("GET /wifi?ssid=") >= 0) {
               int ssidIndex = header.indexOf("ssid=") + 5;
               int passIndex = header.indexOf("&pass=");
+              int httpIndex = header.indexOf("HTTP");
               String ssid = header.substring(ssidIndex, passIndex);
-              String pass = header.substring(passIndex + 6, header.indexOf("HTTP") - 1);
+              String pass = header.substring(passIndex + 6, httpIndex - 1);
 
               ssid.replace("%20", " ");
 
@@ -99,7 +100,7 @@ void accpoint() {
                   client.println("Connection: close");
                   client.println();
                   client.println("<!DOCTYPE html><html><body>");
-                  client.println("<h1>Redirecting...</h1>");
+                  client.println("<h1>WiFi Connected! Redirecting...</h1>");
                   client.println("</body></html>");
                   client.flush();
                   delay(1000);
@@ -114,31 +115,105 @@ void accpoint() {
                 WiFi.mode(WIFI_AP);
                 WiFi.softAP(ap_ssid, ap_password);
                 Serial.println("Switched back to AP mode");
+                
+                // Send error response
+                client.println("HTTP/1.1 200 OK");
+                client.println("Content-type:text/html");
+                client.println();
+                client.println("<!DOCTYPE html><html><body>");
+                client.println("<h1>WiFi Connection Failed!</h1>");
+                client.println("<p>Please check your credentials and try again.</p>");
+                client.println("<a href='/'>Go Back</a>");
+                client.println("</body></html>");
+                client.println();
                 break;
               }
             }
+            // Handle MQTT configuration
+            else if (header.indexOf("GET /mqtt?username=") >= 0) {
+              // Parse MQTT settings
+              int usernameIndex = header.indexOf("username=") + 9;
+              int keyIndex = header.indexOf("&key=");
+              int httpIndex = header.indexOf("HTTP");
+              
+              String username = header.substring(usernameIndex, keyIndex);
+              String key = header.substring(keyIndex + 5, httpIndex - 1);
+              
+              // URL decode spaces
+              username.replace("%20", " ");
+              key.replace("%20", " ");
+
+              Serial.println("Received MQTT settings:");
+              Serial.println("Username: " + username);
+              Serial.println(String("Key: ") + (key.length() > 0 ? "****" : "empty"));
+
+              // Save MQTT settings
+              saveMQTTSettings(username, key);
+              
+              // Send success response
+              client.println("HTTP/1.1 200 OK");
+              client.println("Content-type:text/html");
+              client.println();
+              client.println("<!DOCTYPE html><html><body>");
+              client.println("<h1>MQTT Settings Saved!</h1>");
+              client.println("<p>MQTT configuration has been updated successfully.</p>");
+              client.println("<a href='/'>Go Back</a>");
+              client.println("</body></html>");
+              client.println();
+              break;
+            }
+            
+            // Default page - show both forms
             client.println("HTTP/1.1 200 OK");
             client.println("Content-type:text/html");
             client.println();
 
             client.println("<!DOCTYPE html><html><head><meta charset='UTF-8'>");
-            client.println("<title>ESP32 WiFi Setup</title>");
+            client.println("<title>ESP32 Configuration</title>");
             client.println("<style>");
             client.println("body{font-family:Arial,sans-serif;background:#f5f5f5;padding:20px;}");
-            client.println(".box{background:#fff;padding:20px;border-radius:8px;max-width:400px;margin:auto;box-shadow:0 0 10px rgba(0,0,0,0.1);}");
-            client.println("h2{text-align:center;color:#007cba;}");
+            client.println(".container{max-width:600px;margin:auto;}");
+            client.println(".card{background:#fff;padding:20px;border-radius:8px;margin-bottom:20px;box-shadow:0 0 10px rgba(0,0,0,0.1);}");
+            client.println("h1{text-align:center;color:#007cba;margin-bottom:30px;}");
+            client.println("h2{color:#007cba;margin-bottom:15px;border-bottom:2px solid #007cba;padding-bottom:5px;}");
             client.println("input,button{width:100%;padding:12px;margin:8px 0;box-sizing:border-box;border-radius:5px;border:1px solid #ccc;}");
             client.println("button{background:#007cba;color:white;border:none;cursor:pointer;}");
             client.println("button:hover{background:#005a87;}");
+            client.println(".note{font-size:12px;color:#666;margin-top:5px;}");
+            client.println(".success{background:#d4edda;color:#155724;padding:10px;border-radius:5px;margin-bottom:15px;}");
+            client.println(".mqtt-info{background:#e7f3ff;padding:15px;border-radius:5px;margin-bottom:15px;border-left:4px solid #007cba;}");
+            client.println(".highlight{background:#fff3cd;border:1px solid #ffeaa7;padding:10px;border-radius:5px;margin-bottom:15px;}");
             client.println("</style></head><body>");
-            client.println("<div class='box'>");
-            client.println("<h2>ESP32 WiFi Setup</h2>");
-            client.println("<form action='/'>");
+            client.println("<div class='container'>");
+            client.println("<h1>🔧 ESP32 Configuration Center</h1>");
+            
+            client.println("<div class='highlight'>");
+            client.println("<strong>📍 Chú ý:</strong> Đây là nơi duy nhất để cấu hình WiFi và MQTT cho thiết bị ESP32 của bạn.");
+            client.println("</div>");
+            
+            client.println("<div class='card'>");
+            client.println("<h2>📶 WiFi Settings</h2>");
+            client.println("<form action='/wifi'>");
             client.println("<input name='ssid' placeholder='WiFi SSID' required>");
             client.println("<input name='pass' type='password' placeholder='WiFi Password'>");
-            client.println("<button type='submit'>Connect</button>");
-            client.println("</form></div>");
-            client.println("</body></html>");
+            client.println("<button type='submit'>Connect WiFi</button>");
+            client.println("</form>");
+            client.println("</div>");
+            
+            client.println("<div class='card'>");
+            client.println("<h2>📡 MQTT Settings</h2>");
+            client.println("<div class='mqtt-info'>");
+            client.println("<strong>ℹ️ Thông tin:</strong> Cấu hình MQTT chỉ có thể thực hiện tại đây (Access Point mode)<br>");
+            client.println("Server và Port sử dụng mặc định: <strong>io.adafruit.com:1883</strong>");
+            client.println("</div>");
+            client.println("<form action='/mqtt'>");
+            client.println("<input name='username' placeholder='MQTT Username' required>");
+            client.println("<input name='key' type='password' placeholder='MQTT Key/Password' required>");
+            client.println("<button type='submit'>Save MQTT Settings</button>");
+            client.println("</form>");
+            client.println("</div>");
+            
+            client.println("</div></body></html>");
             client.println();
 
             break;
@@ -164,4 +239,11 @@ void forceAPMode() {
   apMode = false;
   initAP();
   Serial.println("Forced switch to AP mode completed");
+}
+
+void clearAllSettings() {
+  Serial.println("Clearing all settings (WiFi & MQTT)...");
+  clearWiFiSettings();
+  clearMQTTSettings();
+  Serial.println("All settings cleared successfully!");
 }
