@@ -502,6 +502,45 @@
         </button>
       </div>
     </div>
+    <!-- Cấu hình Email & Ngưỡng cảm biến -->
+    <div class="card fade-in">
+      <div class="card-header">
+        <div class="card-icon" style="background: linear-gradient(135deg, #ec4899, #db2777);">
+          <i class="fas fa-envelope-open-text"></i>
+        </div>
+        <h3 class="card-title">Cảnh báo Email & Ngưỡng cảm biến</h3>
+      </div>
+
+      <!-- Nhập Email -->
+      <div class="control-group">
+        <div class="control-label">
+          <i class="fas fa-envelope"></i>
+          <span>Địa chỉ Email nhận cảnh báo</span>
+        </div>
+        <input type="email" id="emailInput" class="form-control" placeholder="example@gmail.com">
+      </div>
+
+      <!-- Ngưỡng cảnh báo -->
+      <div class="control-group">
+        <div class="control-label">
+          <i class="fas fa-sliders-h"></i>
+          <span>Ngưỡng cảnh báo cảm biến</span>
+        </div>
+        <div class="sensor-grid">
+          <input type="number" class="form-control" id="thresholdTemp" placeholder="Nhiệt độ (°C)">
+          <input type="number" class="form-control" id="thresholdHumid" placeholder="Độ ẩm không khí (%)">
+          <input type="number" class="form-control" id="thresholdSoli" placeholder="Độ ẩm đất (%)">
+          <input type="number" class="form-control" id="thresholdLux" placeholder="Ánh sáng (lux)">
+          <input type="number" class="form-control" id="thresholdDistance" placeholder="Khoảng cách (cm)">
+        </div>
+      </div>
+
+      <button id="btnSaveThreshold" class="btn btn-success" style="margin-top: 1rem;">
+        <i class="fas fa-save"></i>
+        <span>Lưu cấu hình</span>
+      </button>
+    </div>
+
 
     <!-- Sensor Data Card -->
     <div class="card fade-in">
@@ -796,6 +835,38 @@
         notification.remove();
       }, 3000);
     }
+    // Gửi dữ liệu cấu hình email và ngưỡng về ESP32
+    document.getElementById('btnSaveThreshold').addEventListener('click', () => {
+      const email = document.getElementById('emailInput').value.trim();
+      const thresholdTemp = parseFloat(document.getElementById('thresholdTemp').value);
+      const thresholdHumid = parseFloat(document.getElementById('thresholdHumid').value);
+      const thresholdSoli = parseFloat(document.getElementById('thresholdSoli').value);
+      const thresholdLux = parseFloat(document.getElementById('thresholdLux').value);
+      const thresholdDistance = parseFloat(document.getElementById('thresholdDistance').value);
+
+      if (!email || !email.includes('@')) {
+        showNotification('Vui lòng nhập email hợp lệ.', 'error');
+        return;
+      }
+
+      const data = {
+        action: 'setThresholds',
+        email,
+        thresholdTemp,
+        thresholdHumid,
+        thresholdSoli,
+        thresholdLux,
+        thresholdDistance
+      };
+
+      if (isConnected) {
+        socket.send(JSON.stringify(data));
+        showNotification('Đã gửi cấu hình thành công!', 'success');
+      } else {
+        showNotification('Không có kết nối WebSocket.', 'error');
+      }
+    });
+
 
     // Add slide-in animation
     const style = document.createElement('style');

@@ -21,6 +21,7 @@
 #include <ArduinoJson.h> 
 #include "time.h"
 #include <ESP_Google_Sheet_Client.h>
+#include <ESP_Mail_Client.h>
 
 
 
@@ -43,5 +44,6 @@
 #include "../src/connect/TaskAccesspoint.h"
 #include "../src/connect/TaskGGsheet.h"
 #include "../src/task/TaskCnWifi.h"
+#include "../src/device/TasksendMail.h"
 
 #endif
