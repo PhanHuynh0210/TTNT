@@ -1,9 +1,7 @@
 #include "Device.h"
 
 void initDevice(){
-    initWebServer();
     initDHT20();
-    initGGsheet();
     // initES35();  
     // initJXBS();
     // initkc();

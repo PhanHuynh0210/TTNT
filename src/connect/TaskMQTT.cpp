@@ -125,11 +125,8 @@ void reconnectMQTT()
     }
     else
     {
-        // Chỉ thử kết nối lại nếu có WiFi
         if (WiFi.status() == WL_CONNECTED) {
             InitMQTT();
-        } else {
-            Serial.println("WiFi disconnected. Cannot reconnect to MQTT.");
         }
     }
 }

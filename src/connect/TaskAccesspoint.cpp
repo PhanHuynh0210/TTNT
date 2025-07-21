@@ -1,46 +1,27 @@
 #include "TaskAccesspoint.h"
+#include "TaskWifi.h"
 
-Preferences preferences;
+WiFiServer apServer(90);
+String header;
 
 const char* ap_ssid = "ESP32_Config";
 const char* ap_password = "12345678";
 
-WiFiServer apServer(90);
-String header;
-bool apMode = false;
-
 void initAP() {
-  if (apMode && WiFi.getMode() == WIFI_AP) {
-    return;
-  }
-  preferences.begin("wifi-config", false);
-  WiFi.disconnect(true);
-  delay(1000);
-  WiFi.mode(WIFI_AP);
-  bool apStarted = WiFi.softAP(ap_ssid, ap_password);
-  
-  if (apStarted) {
-    Serial.println("Access Point started successfully!");
-    Serial.print("AP SSID: ");
-    Serial.println(ap_ssid);
-    Serial.print("AP Password: ");
-    Serial.println(ap_password);
-    Serial.println("http://192.168.4.1:90");
-    apServer.begin();
-    apMode = true;
-  } else {
-    Serial.println(" Failed to start Access Point!");
-    apMode = false;
-  }
+  WiFi.softAP(ap_ssid, ap_password);
+  Serial.println("Access Point started successfully!");
+  Serial.print("AP SSID: ");
+  Serial.println(ap_ssid);
+  Serial.print("AP Password: ");
+  Serial.println(ap_password);
+  Serial.println("http://192.168.4.1:90");
+  apServer.begin();
 }
 
 void accpoint() {
-  if (!apMode) return; 
- 
   WiFiClient client = apServer.available();
 
   if (client) {
-    Serial.println("New Client connected to AP.");
     String currentLine = "";
     header = "";
 
@@ -60,18 +41,13 @@ void accpoint() {
 
               ssid.replace("%20", " ");
 
-              Serial.println("Received WiFi credentials:");
+              Serial.println("WiFi:");
               Serial.println("SSID: " + ssid);
               Serial.println("PASS: " + pass);
 
-              preferences.putString("ssid", ssid);
-              preferences.putString("pass", pass);
-              Serial.println("WiFi credentials saved to flash memory.");
-
-              WiFi.disconnect(true); 
+              Serial.println("WiFi save.");
               delay(1000);
               
-              WiFi.mode(WIFI_STA);
               WiFi.begin(ssid.c_str(), pass.c_str());
               Serial.println("Attempting to connect to new WiFi...");
               Serial.println("SSID: " + ssid);
@@ -89,43 +65,40 @@ void accpoint() {
               }
 
               if (WiFi.status() == WL_CONNECTED) {
-                  Serial.println("\n Successfully connected to new WiFi!");
-                  String staIP = WiFi.localIP().toString();
-                  Serial.println("IP Address: " + staIP);
+                Serial.println("\nSave, connected");
 
-                  client.println("HTTP/1.1 302 Found");
-                  client.print("Location: http://");
-                  client.print(staIP);
-                  client.println("/"); 
-                  client.println("Connection: close");
-                  client.println();
-                  client.println("<!DOCTYPE html><html><body>");
-                  client.println("<h1>WiFi Connected! Redirecting...</h1>");
-                  client.println("</body></html>");
-                  client.flush();
-                  delay(1000);
+                saveWiFi(ssid, pass);
+                String staIP = WiFi.localIP().toString();
+                Serial.println("IP Address: " + staIP);
 
-                  apMode = false;
-                  break;
+                // Gửi phản hồi HTML thông báo kết nối thành công
+                client.println("HTTP/1.1 200 OK");
+                client.println("Content-type:text/html");
+                client.println("Connection: close");
+                client.println();
+                client.println("<!DOCTYPE html><html><head><meta charset='UTF-8'>");
+                client.println("<title>WiFi Connected</title>");
+                client.println("<style>");
+                client.println("body{font-family:sans-serif;text-align:center;background:#f0f0f0;padding:50px;}");
+                client.println(".card{display:inline-block;background:white;padding:30px;border-radius:10px;box-shadow:0 0 10px rgba(0,0,0,0.1);}");
+                client.println("h2{color:green;}");
+                client.println("</style></head><body>");
+                client.println("<div class='card'>");
+                client.println("<h2> Kết nối WiFi thành công!</h2>");
+                client.println("<p>Địa chỉ IP của ESP32:</p>");
+                client.println("<p><strong>" + staIP + "</strong></p>");
+                client.println("<p>Bạn có thể đóng trang này.</p>");
+                client.println("</div>");
+                client.println("</body></html>");
+                client.println();
+
+                delay(3000);  
+                ESP.restart();
+                client.stop();
+                return;
               } else {
                 Serial.println("\n Failed to connect to new WiFi!");
                 Serial.println("Final WiFi Status: " + String(WiFi.status()));
-                WiFi.disconnect(true);
-                delay(1000);
-                WiFi.mode(WIFI_AP);
-                WiFi.softAP(ap_ssid, ap_password);
-                Serial.println("Switched back to AP mode");
-                
-                // Send error response
-                client.println("HTTP/1.1 200 OK");
-                client.println("Content-type:text/html");
-                client.println();
-                client.println("<!DOCTYPE html><html><body>");
-                client.println("<h1>WiFi Connection Failed!</h1>");
-                client.println("<p>Please check your credentials and try again.</p>");
-                client.println("<a href='/'>Go Back</a>");
-                client.println("</body></html>");
-                client.println();
                 break;
               }
             }
@@ -147,20 +120,14 @@ void accpoint() {
               Serial.println("Received MQTT settings:");
               Serial.println("Server: " + server);
               Serial.println("Username: " + username);
-              Serial.println(String("Key: ") + (key.length() > 0 ? "****" : "empty"));
+              Serial.println(String("Key: ") + key);
 
               saveMQTTSettings(server, username, key);
-              
-              // Send success response
               client.println("HTTP/1.1 200 OK");
-              client.println("Content-type:text/html");
+              client.println("Content-type:text/plain");
               client.println();
-              client.println("<!DOCTYPE html><html><body>");
-              client.println("<h1>MQTT Settings Saved!</h1>");
-              client.println("<p>MQTT configuration has been updated successfully.</p>");
-              client.println("<a href='/'>Go Back</a>");
-              client.println("</body></html>");
-              client.println();
+              client.println("SAVED");
+
               break;
             }
             
@@ -209,14 +176,35 @@ void accpoint() {
             client.println("</div>");
             
 
-            client.println("<form action='/mqtt'>");
-            client.println("<input name='server' placeholder='MQTT Server (vd: io.adafruit.com)' value='io.adafruit.com' required>");
+            client.println("<form id='mqttForm' onsubmit='submitMQTT(event)'>");
+            client.println("<input id='mqttServer' placeholder='MQTT Server (vd: io.adafruit.com)' value='io.adafruit.com' required>");
             client.println("<div class='note'>Mặc định: io.adafruit.com (port 1883)</div>");
-            client.println("<input name='username' placeholder='MQTT Username' required>");
-            client.println("<input name='key' type='password' placeholder='MQTT Key/Password' required>");
+            client.println("<input id='mqttUsername' placeholder='MQTT Username' required>");
+            client.println("<input id='mqttKey' type='password' placeholder='MQTT Key/Password' required>");
             client.println("<button type='submit'>Save MQTT Settings</button>");
             client.println("</form>");
+            client.println("<div id='mqttMessage' class='success' style='display:none;'>Đã lưu cấu hình MQTT thành công!</div>");
             client.println("</div>");
+
+            client.println("<script>");
+            client.println("function submitMQTT(event) {");
+            client.println("  event.preventDefault();");
+            client.println("  const server = document.getElementById('mqttServer').value;");
+            client.println("  const username = document.getElementById('mqttUsername').value;");
+            client.println("  const key = document.getElementById('mqttKey').value;");
+            client.println("  const url = `/mqtt?server=${encodeURIComponent(server)}&username=${encodeURIComponent(username)}&key=${encodeURIComponent(key)}`;");
+            client.println("  fetch(url)");
+            client.println("    .then(res => res.text())");
+            client.println("    .then(text => {");
+            client.println("      if (text.trim() === 'SAVED') {");
+            client.println("        const msg = document.getElementById('mqttMessage');");
+            client.println("        msg.style.display = 'block';");
+            client.println("        setTimeout(() => msg.style.display = 'none', 3000);");
+            client.println("      }");
+            client.println("    });");
+            client.println("}");
+            client.println("</script>");
+
             
             client.println("</div></body></html>");
             client.println();
@@ -232,22 +220,13 @@ void accpoint() {
     }
     header = "";
     client.stop();
-    Serial.println("Client disconnected from AP.");
   }
 }
 
-void forceAPMode() {
-  Serial.println("Force switching to Access Point mode...");
-  clearWiFiSettings();
-  WiFi.disconnect(true);
-  delay(1000);
-  apMode = false;
-  initAP();
-  Serial.println("Forced switch to AP mode completed");
-}
+
 
 void clearAllSettings() {
-  Serial.println("Clearing all settings (WiFi & MQTT)...");
+  Serial.println("Clearing all settings...");
   clearWiFiSettings();
   clearMQTTSettings();
   Serial.println("All settings cleared successfully!");

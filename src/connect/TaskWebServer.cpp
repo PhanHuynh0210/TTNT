@@ -92,7 +92,6 @@ void handleAPModeSwitch(AsyncWebSocketClient *client) {
   client->text(response);
   delay(500);
   
-  forceAPMode();
 }
 
 void handleWebSocketMessage(AsyncWebSocketClient *client, String msg) {
@@ -135,6 +134,8 @@ void initWebServer() {
   ElegantOTA.begin(&server);
   server.begin();
 
+  String staIP = WiFi.localIP().toString();
+  Serial.println("IP Address: " + staIP);
   Serial.println("HTTP + WS server started");
   Serial.println("OTA ready! Open http://<IP>/update to access OTA update page");
 }

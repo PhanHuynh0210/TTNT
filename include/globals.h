@@ -42,7 +42,6 @@
 #include "../src/device/TaskJXBS.h"
 #include "../src/connect/TaskAccesspoint.h"
 #include "../src/connect/TaskGGsheet.h"
-
-
+#include "../src/task/TaskCnWifi.h"
 
 #endif
