@@ -41,7 +41,6 @@ void accpoint() {
 
               ssid.replace("%20", " ");
 
-              Serial.println("WiFi:");
               Serial.println("SSID: " + ssid);
               Serial.println("PASS: " + pass);
 

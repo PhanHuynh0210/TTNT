@@ -4,7 +4,7 @@
 #define SMTP_PORT 465
 
 #define AUTHOR_EMAIL email
-#define AUTHOR_PASSWORD "vedx axmv yxnf qef"
+#define AUTHOR_PASSWORD "rqvv fxnm yukd tqzl"
 
 SMTPSession smtp;
 

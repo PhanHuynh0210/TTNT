@@ -850,7 +850,6 @@
       }
 
       const data = {
-        action: 'setThresholds',
         email,
         thresholdTemp,
         thresholdHumid,
@@ -860,7 +859,7 @@
       };
 
       if (isConnected) {
-        socket.send(JSON.stringify(data));
+        socket.send('setThreshold:' + JSON.stringify(data));
         showNotification('Đã gửi cấu hình thành công!', 'success');
       } else {
         showNotification('Không có kết nối WebSocket.', 'error');

@@ -18,6 +18,9 @@ float thresholdLux = 400.0;
 float thresholdSoli = 300.0;
 float thresholdDistance = 50.0;
 
+unsigned long lastMailTime = 0;
+const unsigned long MAIL_INTERVAL = 60000; 
+
 String createStatusJSON() {
   JsonDocument doc;
   
@@ -89,23 +92,25 @@ void handleLEDCControl(String msg) {
   } else if (msg.startsWith("setThreshold:")) {
     String jsonData = msg.substring(13);
     JsonDocument doc;
+    Serial.println(jsonData);
     DeserializationError error = deserializeJson(doc, jsonData);
     if (!error) {
-      // Lưu các giá trị mới
-      email = doc["email"].as<String>();
-      thresholdTemp = doc["thresholdTemp"].as<float>();
-      thresholdHumid = doc["thresholdHumid"].as<float>();
-      thresholdLux = doc["thresholdLux"].as<float>();
-      thresholdSoli = doc["thresholdSoli"].as<float>();
-      thresholdDistance = doc["thresholdDistance"].as<float>();
+    email = doc["email"].as<String>();
+    thresholdTemp = doc["thresholdTemp"].as<float>();
+    thresholdHumid = doc["thresholdHumid"].as<float>();
+    thresholdLux = doc["thresholdLux"].as<float>();
+    thresholdSoli = doc["thresholdSoli"].as<float>();
+    thresholdDistance = doc["thresholdDistance"].as<float>();
 
-      // Lưu vào Preferences (nếu cần thiết)
-      SensorPrefs.putString("email", email);
-      SensorPrefs.putFloat("temp", thresholdTemp);
-      SensorPrefs.putFloat("humid", thresholdHumid);
-      SensorPrefs.putFloat("lux", thresholdLux);
-      SensorPrefs.putFloat("soli", thresholdSoli);
-      SensorPrefs.putFloat("distance", thresholdDistance);
+    // Lưu vào Preferences
+    SensorPrefs.begin("sensor-config", false);
+    SensorPrefs.putString("email", email);
+    SensorPrefs.putFloat("temp", thresholdTemp);
+    SensorPrefs.putFloat("humid", thresholdHumid);
+    SensorPrefs.putFloat("lux", thresholdLux);
+    SensorPrefs.putFloat("soli", thresholdSoli);
+    SensorPrefs.putFloat("distance", thresholdDistance);
+    SensorPrefs.end();
 
       // Phản hồi client
       JsonDocument res;
@@ -131,6 +136,7 @@ void handleAPModeSwitch(AsyncWebSocketClient *client) {
 }
 
 void handleWebSocketMessage(AsyncWebSocketClient *client, String msg) {
+  Serial.println("[DEBUG] handleWebSocketMessage called with msg: " + msg);
   if (msg.startsWith("toggleLED:")) {
     char led = msg.charAt(10);
     if (led == 'A') {
@@ -138,7 +144,7 @@ void handleWebSocketMessage(AsyncWebSocketClient *client, String msg) {
     } else if (led == 'C') {
       handleLEDCControl(msg);
     }
-  } else if (msg.startsWith("rgbMode:") || msg.startsWith("setColor:")) {
+  } else if (msg.startsWith("rgbMode:") || msg.startsWith("setColor:") || msg.startsWith("setThreshold:")) {
     handleLEDCControl(msg);
   } else if (msg == "switchToAP") {
     handleAPModeSwitch(client);
@@ -158,10 +164,10 @@ void onWebSocketEvent(AsyncWebSocket *server, AsyncWebSocketClient *client,
 }
 
 void initWebServer() {
-  if (!LittleFS.begin()) {
-    Serial.println("LittleFS Mount Failed");
-    return;
-  }
+if (!LittleFS.begin(true)) { 
+  Serial.println("LittleFS Mount Failed, even after formatting!");
+  return;
+}
 
   server.serveStatic("/", LittleFS, "/").setDefaultFile("index.html");
   ws.onEvent(onWebSocketEvent);
@@ -179,10 +185,17 @@ void initWebServer() {
   thresholdDistance = SensorPrefs.getFloat("distance", 50.0);
   SensorPrefs.end();
 
+  Serial.println("== Giá trị đã lưu trong NVS ==");
+  Serial.println("Email: " + email);
+  Serial.printf("Ngưỡng nhiệt độ: %.2f°C\n", thresholdTemp);
+  Serial.printf("Ngưỡng độ ẩm: %.2f%%\n", thresholdHumid);
+  Serial.printf("Ngưỡng ánh sáng: %.2f lux\n", thresholdLux);
+  Serial.printf("Ngưỡng độ ẩm đất: %.2f\n", thresholdSoli);
+  Serial.printf("Ngưỡng khoảng cách: %.2f cm\n", thresholdDistance);
+
   String staIP = WiFi.localIP().toString();
   Serial.println("IP Address: " + staIP);
   Serial.println("HTTP + WS server started");
-  Serial.println("OTA ready! Open http://<IP>/update to access OTA update page");
 }
 
 void loopWebServer() {
@@ -237,17 +250,21 @@ void loopWebServer() {
       }
 
       if (shouldAlert && email.length() > 5) {
-        StaticJsonDocument<1024> doc;
-        doc["device"] = NAME_DEVICE;
-        doc["temp"] = temp;
-        doc["humid"] = humid;
-        doc["lux"] = lux;
-        doc["soli"] = soli;
-        doc["distance"] = distance;
-        doc["message"] = reason;
-        String alertContent;
-        serializeJson(doc, alertContent);
-        sendMail(alertContent);
+        unsigned long now = millis();
+        if (now - lastMailTime > MAIL_INTERVAL || lastMailTime == 0) {
+          StaticJsonDocument<1024> doc;
+          doc["device"] = NAME_DEVICE;
+          doc["temp"] = temp;
+          doc["humid"] = humid;
+          doc["lux"] = lux;
+          doc["soli"] = soli;
+          doc["distance"] = distance;
+          doc["message"] = reason;
+          String alertContent;
+          serializeJson(doc, alertContent);
+          sendMail(alertContent);
+          lastMailTime = now;
+        }
       }
 
     }
