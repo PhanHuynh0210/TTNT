@@ -12,11 +12,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Download firmware from release
-        uses: dsaltares/fetch-gh-release-asset@v1.0.9
+      - name: Download firmware.bin from release
+        uses: robinraju/release-downloader@v1.8
         with:
-          file: firmware.bin # <-- Đúng tên file `.bin` trong release
-          token: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ github.ref_name }}
+          fileName: firmware.bin
+          out-file-path: ./firmware/
 
       - name: Clone gh-pages branch
         uses: actions/checkout@v4
@@ -25,8 +26,7 @@ jobs:
           path: gh-pages
 
       - name: Copy firmware to gh-pages
-        run: |
-          cp firmware.bin gh-pages/firmware.bin
+        run: cp ./firmware/firmware.bin gh-pages/
 
       - name: Commit and push to gh-pages
         run: |
@@ -34,5 +34,5 @@ jobs:
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
           git add firmware.bin
-          git commit -m "Update OTA firmware from latest release"
+          git commit -m "Update firmware from release ${{ github.ref_name }}"
           git push origin gh-pages
