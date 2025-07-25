@@ -10,8 +10,11 @@ void getValueDHT20()
     if (dht20.read() == DHT20_OK)
     {
         Serial.println(String(dht20.getTemperature()) + "-" + String(dht20.getHumidity()));
-        publishData("Thermal", String(dht20.getTemperature()));
-        publishData("Humid", String(dht20.getHumidity()));
+        String tempStr = String(dht20.getTemperature());
+        String humidStr = String(dht20.getHumidity());
+        client.publish("esp32/sensor/temp", tempStr.c_str());
+        client.publish("esp32/sensor/humid", humidStr.c_str());
+
     }
     else
     {

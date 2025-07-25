@@ -3,6 +3,7 @@
 
 #include "globals.h"
 
+extern PubSubClient client;
 void initMQTT();
 void reconnectMQTT();
 void publishData(String feed, String data);

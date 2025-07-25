@@ -22,6 +22,8 @@
 #include "time.h"
 #include <ESP_Google_Sheet_Client.h>
 #include <ESP_Mail_Client.h>
+#include <HTTPUpdate.h>  
+
 
 
 
@@ -45,5 +47,6 @@
 #include "../src/connect/TaskGGsheet.h"
 #include "../src/task/TaskCnWifi.h"
 #include "../src/device/TasksendMail.h"
+#include "../secrest.h"
 
 #endif
