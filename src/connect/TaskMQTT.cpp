@@ -31,6 +31,33 @@ CAUw7C29C79Fv1C5qfPrmAESrciIxpg0X40KPMbp1ZWVbd4=
 -----END CERTIFICATE-----
 )EOF";
 
+const char* letsEncryptRootCert = R"EOF(
+-----BEGIN CERTIFICATE-----
+MIID0zCCArugAwIBAgIQVmcdBOpPmUxvEIFHWdJ1lDANBgkqhkiG9w0BAQwFADB7
+MQswCQYDVQQGEwJHQjEbMBkGA1UECAwSR3JlYXRlciBNYW5jaGVzdGVyMRAwDgYD
+VQQHDAdTYWxmb3JkMRowGAYDVQQKDBFDb21vZG8gQ0EgTGltaXRlZDEhMB8GA1UE
+AwwYQUFBIENlcnRpZmljYXRlIFNlcnZpY2VzMB4XDTE5MDMxMjAwMDAwMFoXDTI4
+MTIzMTIzNTk1OVowgYgxCzAJBgNVBAYTAlVTMRMwEQYDVQQIEwpOZXcgSmVyc2V5
+MRQwEgYDVQQHEwtKZXJzZXkgQ2l0eTEeMBwGA1UEChMVVGhlIFVTRVJUUlVTVCBO
+ZXR3b3JrMS4wLAYDVQQDEyVVU0VSVHJ1c3QgRUNDIENlcnRpZmljYXRpb24gQXV0
+aG9yaXR5MHYwEAYHKoZIzj0CAQYFK4EEACIDYgAEGqxUWqn5aCPnetUkb1PGWthL
+q8bVttHmc3Gu3ZzWDGH926CJA7gFFOxXzu5dP+Ihs8731Ip54KODfi2X0GHE8Znc
+JZFjq38wo7Rw4sehM5zzvy5cU7Ffs30yf4o043l5o4HyMIHvMB8GA1UdIwQYMBaA
+FKARCiM+lvEH7OKvKe+CpX/QMKS0MB0GA1UdDgQWBBQ64QmG1M8ZwpZ2dEl23OA1
+xmNjmjAOBgNVHQ8BAf8EBAMCAYYwDwYDVR0TAQH/BAUwAwEB/zARBgNVHSAECjAI
+MAYGBFUdIAAwQwYDVR0fBDwwOjA4oDagNIYyaHR0cDovL2NybC5jb21vZG9jYS5j
+b20vQUFBQ2VydGlmaWNhdGVTZXJ2aWNlcy5jcmwwNAYIKwYBBQUHAQEEKDAmMCQG
+CCsGAQUFBzABhhhodHRwOi8vb2NzcC5jb21vZG9jYS5jb20wDQYJKoZIhvcNAQEM
+BQADggEBABns652JLCALBIAdGN5CmXKZFjK9Dpx1WywV4ilAbe7/ctvbq5AfjJXy
+ij0IckKJUAfiORVsAYfZFhr1wHUrxeZWEQff2Ji8fJ8ZOd+LygBkc7xGEJuTI42+
+FsMuCIKchjN0djsoTI0DQoWz4rIjQtUfenVqGtF8qmchxDM6OW1TyaLtYiKou+JV
+bJlsQ2uRl9EMC5MCHdK8aXdJ5htN978UeAOwproLtOGFfy/cQjutdAFI3tZs4RmY
+CV4Ks2dH/hzg1cEo70qLRDEmBDeNiXQ2Lu+lIg+DdEmSx/cQwgwp+7e9un/jX9Wf
+8qn0dNW44bOwgeThpWOjzOoEeJBuv/c=
+-----END CERTIFICATE-----
+)EOF";
+
+
 
 WiFiClientSecure espSecure; 
 PubSubClient client(espSecure);
@@ -118,12 +145,12 @@ void callback(char *topic, byte *payload, unsigned int length)
     if (String(topic) == "esp32/control/led") {
     digitalWrite(48, message == "1" ? HIGH : LOW);
     }
-    // else if (String(topic) == "esp32/control/rgb") {
-    //     digitalWrite(RGB_POWER_PIN, msg == "1" ? HIGH : LOW);
-    // }
-    // else if (String(topic) == "esp32/control/mode") {
-    //     rgbMode = msg; // "auto" hoặc "static"
-    // }
+    else if (String(topic) == "esp32/control/rgb") {
+        digitalWrite(6, message == "1" ? HIGH : LOW);
+    }
+    else if (String(topic) == "esp32/control/mode") {
+        rgbMode = message; // "auto" hoặc "static"
+    }
     // else if (String(topic) == "esp32/control/color") {
     //     rgbColorHex = msg;
     //     // Chuyển hex sang RGB nếu cần
@@ -154,10 +181,16 @@ void callback(char *topic, byte *payload, unsigned int length)
         if (!err) {
         String firmwareUrl = doc["url"];
         // Gọi hàm OTA cập nhật từ URL
+        WiFiClientSecure otaClient;
+        if (firmwareUrl.indexOf("github.io") >= 0 || firmwareUrl.indexOf("githubusercontent.com") >= 0) {
+            otaClient.setCACert(letsEncryptRootCert);  // bạn sẽ thêm CA này ở dưới
+        } else {
+            otaClient.setInsecure();  // fallback nếu cần
+        }
         Serial.println("=== OTA yêu cầu nhận được ===");
         Serial.println("URL OTA: " + firmwareUrl);
         Serial.println("=============================");
-        t_httpUpdate_return ret = httpUpdate.update(espSecure, firmwareUrl);
+        t_httpUpdate_return ret = httpUpdate.update(otaClient, firmwareUrl);
         switch (ret) {
             case HTTP_UPDATE_FAILED:
                 Serial.printf("OTA thất bại: %s\n", httpUpdate.getLastErrorString().c_str());

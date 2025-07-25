@@ -6,7 +6,7 @@ void initDevice(){
     // initJXBS();
     // initkc();
     // initLCD();
-    // initRGB();
+     initRGB();
      initLED();
     // initLUX();
     // initFan();
