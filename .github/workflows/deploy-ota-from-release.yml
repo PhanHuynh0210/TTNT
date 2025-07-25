@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout source code
         uses: actions/checkout@v4
 
       - name: Download firmware.bin from release
@@ -19,11 +19,12 @@ jobs:
           fileName: firmware.bin
           out-file-path: ./firmware/
 
-      - name: Checkout gh-pages branch
+      - name: Checkout gh-pages branch with write permission
         uses: actions/checkout@v4
         with:
           ref: gh-pages
           path: gh-pages
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Copy firmware to gh-pages
         run: cp ./firmware/firmware.bin gh-pages/
