@@ -13,7 +13,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Download firmware from release
-        uses: dsaltares/fetch-gh-release-asset@v1.0.1
+        uses: dsaltares/fetch-gh-release-asset@v1.0.9
         with:
           file: firmware.bin # <-- Đúng tên file `.bin` trong release
           token: ${{ secrets.GITHUB_TOKEN }}
