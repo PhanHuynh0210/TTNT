@@ -100,11 +100,14 @@ void sendMail(String content)
     }
 
     /* Start sending Email and close the session */
-    if (!MailClient.sendMail(&smtp, &message))
+    if (!MailClient.sendMail(&smtp, &message)) {
         ESP_MAIL_PRINTF("Error, Status Code: %d, Error Code: %d, Reason: %s", smtp.statusCode(), smtp.errorCode(), smtp.errorReason().c_str());
+    }
+}
+bool isMailConnected() {
+    return smtp.isLoggedIn() && smtp.isAuthenticated();
 }
 
-/* Callback function to get the Email sending status */
 void smtpCallback(SMTP_Status status)
 {
     /* Print the current status */

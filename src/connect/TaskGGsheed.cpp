@@ -100,6 +100,10 @@ void TaskGGsheet() {
     }
 }
 
+bool isGSheetConnected() {
+    return GSheet.ready();
+}
+
 void tokenStatusCallback(TokenInfo info){
     if (info.status == token_status_error){
         GSheet.printf("Token info: type = %s, status = %s\n", GSheet.getTokenType(info).c_str(), GSheet.getTokenStatus(info).c_str());

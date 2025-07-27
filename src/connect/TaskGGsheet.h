@@ -5,5 +5,6 @@
 
 extern void initGGsheet();
 extern void TaskGGsheet();
+extern bool isGSheetConnected();
 
 #endif // TASKGGSHEET_H

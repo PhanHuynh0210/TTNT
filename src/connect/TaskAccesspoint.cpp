@@ -1,11 +1,76 @@
 #include "TaskAccesspoint.h"
-#include "TaskWifi.h"
 
 WiFiServer apServer(90);
 String header;
 
 const char* ap_ssid = "ESP32_Config";
 const char* ap_password = "12345678";
+
+// Biến để theo dõi trạng thái AP
+bool apMode = false;
+
+// Function kiểm tra nút boot
+bool checkBootButton() {
+  const int BOOT_PIN = 0;  // Pin 0 là nút boot trên ESP32
+  const unsigned long HOLD_TIME = 3000;  // 3 giây
+  
+  pinMode(BOOT_PIN, INPUT);
+  
+  Serial.println("Kiểm tra nút boot...");
+  Serial.println("Nhấn giữ nút BOOT trong 3 giây để vào chế độ Access Point");
+  
+  unsigned long startTime = millis();
+  bool buttonPressed = false;
+  
+  while (millis() - startTime < HOLD_TIME) {
+    if (digitalRead(BOOT_PIN) == LOW) {  // Nút được nhấn (LOW vì có pull-up)
+      buttonPressed = true;
+      Serial.print(".");
+      delay(100);
+    } else {
+      if (buttonPressed) {
+        Serial.println("\nNút boot được thả ra sớm!");
+        return false;
+      }
+    }
+  }
+  
+  if (buttonPressed) {
+    Serial.println("\nNút boot được nhấn giữ đủ 3 giây!");
+    Serial.println("Vào chế độ Access Point...");
+    return true;
+  }
+  
+  Serial.println("\nNút boot không được nhấn.");
+  return false;
+}
+
+// Function khởi tạo AP có điều kiện
+void initAPConditional() {
+  if (checkBootButton()) {
+    apMode = true;
+    initAP();
+  } else {
+    apMode = false;
+    Serial.println("Không vào chế độ Access Point.");
+  }
+}
+
+// Function kiểm tra có đang ở chế độ AP không
+bool isAPMode() {
+  return apMode;
+}
+
+// Function tắt Access Point
+void stopAP() {
+  if (apMode) {
+    Serial.println("Tắt Access Point...");
+    WiFi.softAPdisconnect(true);  // Tắt AP và xóa cấu hình
+    apServer.stop();  // Dừng server
+    apMode = false;
+    Serial.println("Access Point đã được tắt.");
+  }
+}
 
 void initAP() {
   WiFi.softAP(ap_ssid, ap_password);
@@ -19,6 +84,11 @@ void initAP() {
 }
 
 void accpoint() {
+  // Chỉ xử lý khi ở chế độ AP
+  if (!apMode) {
+    return;
+  }
+  
   WiFiClient client = apServer.available();
 
   if (client) {
@@ -86,14 +156,22 @@ void accpoint() {
                 client.println("<h2> Kết nối WiFi thành công!</h2>");
                 client.println("<p>Địa chỉ IP của ESP32:</p>");
                 client.println("<p><strong>" + staIP + "</strong></p>");
-                client.println("<p>Bạn có thể đóng trang này.</p>");
+                client.println("<p>Access Point sẽ tự động tắt sau 3 giây.</p>");
                 client.println("</div>");
                 client.println("</body></html>");
                 client.println();
 
-                delay(3000);  
-                ESP.restart();
                 client.stop();
+                delay(3000);
+                
+                // Tắt Access Point thay vì restart
+                stopAP();
+                
+                // Khởi tạo lại các task cần thiết sau khi có WiFi
+                Serial.println("Khởi tạo lại các task sau khi có WiFi...");
+                initConnect();
+                Serial.println("Các task đã được khởi tạo lại thành công!");
+                
                 return;
               } else {
                 Serial.println("\n Failed to connect to new WiFi!");
