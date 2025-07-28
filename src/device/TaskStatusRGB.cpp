@@ -10,12 +10,13 @@ static bool ledState = false;
 static unsigned long lastBlinkTime = 0;
 
 const uint32_t statusColors[] = {
-    0xFFFF00,  
-    0x00FF00,  
-    0xFF0000   
+    0xFFFF00,  // STATUS_BOOTING - Vàng
+    0x00FF00,  // STATUS_NORMAL - Xanh lá
+    0xFF0000,  // STATUS_ERROR - Đỏ
+    0x0000FF   // STATUS_AP_MODE - Xanh dương
 };
 
-const uint16_t blinkIntervals[] = {500, 0, 200};
+const uint16_t blinkIntervals[] = {500, 0, 200, 1000};
 
 void TaskStatusRGB(void *pvParameters)
 {
@@ -56,6 +57,29 @@ void setStatus(SystemStatus status)
         currentStatus = status;
         lastBlinkTime = millis();
         ledState = false;
+    }
+}
+
+void updateSystemStatus() {
+    bool wifiConnected = isWiFiConnected();
+    bool mqttConnected = isMQTTConnected();
+    
+    if (currentStatus == STATUS_AP_MODE) {
+        return;
+    }
+    
+    // Nếu cả WiFi và MQTT đều kết nối thành công
+    if (wifiConnected && mqttConnected) {
+        setStatus(STATUS_NORMAL);
+    }
+    // Nếu WiFi kết nối nhưng MQTT chưa kết nối
+    else if (wifiConnected && !mqttConnected) {
+        // Giữ nguyên trạng thái hiện tại (có thể là BOOTING hoặc ERROR)
+        // Không chuyển sang NORMAL cho đến khi MQTT cũng kết nối
+    }
+    // Nếu WiFi không kết nối
+    else if (!wifiConnected) {
+        setStatus(STATUS_ERROR);
     }
 }
 

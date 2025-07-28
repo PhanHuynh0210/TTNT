@@ -14,6 +14,8 @@ bool attemptConnect(String ssid, String pass, bool forceDisconnect)
     if (WiFi.status() == WL_CONNECTED) {
         Serial.println("\n Connected to WiFi!");
         Serial.println("IP Address: " + WiFi.localIP().toString());
+        // Cập nhật trạng thái hệ thống khi WiFi kết nối thành công
+        updateSystemStatus();
         return true;
     } else {
         Serial.println("\n Connection failed.");

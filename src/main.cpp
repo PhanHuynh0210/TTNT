@@ -4,7 +4,6 @@
 void setup(){
   Serial.begin(115200);
   // clearAllSettings();
-  
   initStatusRGB();
   setStatus(STATUS_BOOTING);
   InitWiFi();  
@@ -12,8 +11,6 @@ void setup(){
   initDevice();
   initConnect();
   initSystemMonitor();
-  delay(1000);
-  setStatus(STATUS_NORMAL);
 }
 
 void loop(){
@@ -21,4 +18,5 @@ void loop(){
   reconnectMQTT();   
   loopWebServer();  
   accpoint(); 
+  updateSystemStatus();
 }

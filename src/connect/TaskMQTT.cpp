@@ -1,4 +1,5 @@
 #include "TaskMQTT.h"
+#include "TaskAccesspoint.h"
 
 Preferences mqttPrefs;
 
@@ -33,27 +34,20 @@ CAUw7C29C79Fv1C5qfPrmAESrciIxpg0X40KPMbp1ZWVbd4=
 
 const char* letsEncryptRootCert = R"EOF(
 -----BEGIN CERTIFICATE-----
-MIID0zCCArugAwIBAgIQVmcdBOpPmUxvEIFHWdJ1lDANBgkqhkiG9w0BAQwFADB7
-MQswCQYDVQQGEwJHQjEbMBkGA1UECAwSR3JlYXRlciBNYW5jaGVzdGVyMRAwDgYD
-VQQHDAdTYWxmb3JkMRowGAYDVQQKDBFDb21vZG8gQ0EgTGltaXRlZDEhMB8GA1UE
-AwwYQUFBIENlcnRpZmljYXRlIFNlcnZpY2VzMB4XDTE5MDMxMjAwMDAwMFoXDTI4
-MTIzMTIzNTk1OVowgYgxCzAJBgNVBAYTAlVTMRMwEQYDVQQIEwpOZXcgSmVyc2V5
-MRQwEgYDVQQHEwtKZXJzZXkgQ2l0eTEeMBwGA1UEChMVVGhlIFVTRVJUUlVTVCBO
-ZXR3b3JrMS4wLAYDVQQDEyVVU0VSVHJ1c3QgRUNDIENlcnRpZmljYXRpb24gQXV0
-aG9yaXR5MHYwEAYHKoZIzj0CAQYFK4EEACIDYgAEGqxUWqn5aCPnetUkb1PGWthL
-q8bVttHmc3Gu3ZzWDGH926CJA7gFFOxXzu5dP+Ihs8731Ip54KODfi2X0GHE8Znc
-JZFjq38wo7Rw4sehM5zzvy5cU7Ffs30yf4o043l5o4HyMIHvMB8GA1UdIwQYMBaA
-FKARCiM+lvEH7OKvKe+CpX/QMKS0MB0GA1UdDgQWBBQ64QmG1M8ZwpZ2dEl23OA1
-xmNjmjAOBgNVHQ8BAf8EBAMCAYYwDwYDVR0TAQH/BAUwAwEB/zARBgNVHSAECjAI
-MAYGBFUdIAAwQwYDVR0fBDwwOjA4oDagNIYyaHR0cDovL2NybC5jb21vZG9jYS5j
-b20vQUFBQ2VydGlmaWNhdGVTZXJ2aWNlcy5jcmwwNAYIKwYBBQUHAQEEKDAmMCQG
-CCsGAQUFBzABhhhodHRwOi8vb2NzcC5jb21vZG9jYS5jb20wDQYJKoZIhvcNAQEM
-BQADggEBABns652JLCALBIAdGN5CmXKZFjK9Dpx1WywV4ilAbe7/ctvbq5AfjJXy
-ij0IckKJUAfiORVsAYfZFhr1wHUrxeZWEQff2Ji8fJ8ZOd+LygBkc7xGEJuTI42+
-FsMuCIKchjN0djsoTI0DQoWz4rIjQtUfenVqGtF8qmchxDM6OW1TyaLtYiKou+JV
-bJlsQ2uRl9EMC5MCHdK8aXdJ5htN978UeAOwproLtOGFfy/cQjutdAFI3tZs4RmY
-CV4Ks2dH/hzg1cEo70qLRDEmBDeNiXQ2Lu+lIg+DdEmSx/cQwgwp+7e9un/jX9Wf
-8qn0dNW44bOwgeThpWOjzOoEeJBuv/c=
+MIICjzCCAhWgAwIBAgIQXIuZxVqUxdJxVt7NiYDMJjAKBggqhkjOPQQDAzCBiDEL
+MAkGA1UEBhMCVVMxEzARBgNVBAgTCk5ldyBKZXJzZXkxFDASBgNVBAcTC0plcnNl
+eSBDaXR5MR4wHAYDVQQKExVUaGUgVVNFUlRSVVNUIE5ldHdvcmsxLjAsBgNVBAMT
+JVVTRVJUcnVzdCBFQ0MgQ2VydGlmaWNhdGlvbiBBdXRob3JpdHkwHhcNMTAwMjAx
+MDAwMDAwWhcNMzgwMTE4MjM1OTU5WjCBiDELMAkGA1UEBhMCVVMxEzARBgNVBAgT
+Ck5ldyBKZXJzZXkxFDASBgNVBAcTC0plcnNleSBDaXR5MR4wHAYDVQQKExVUaGUg
+VVNFUlRSVVNUIE5ldHdvcmsxLjAsBgNVBAMTJVVTRVJUcnVzdCBFQ0MgQ2VydGlm
+aWNhdGlvbiBBdXRob3JpdHkwdjAQBgcqhkjOPQIBBgUrgQQAIgNiAAQarFRaqflo
+I+d61SRvU8Za2EurxtW20eZzca7dnNYMYf3boIkDuAUU7FfO7l0/4iGzzvfUinng
+o4N+LZfQYcTxmdwlkWOrfzCjtHDix6EznPO/LlxTsV+zfTJ/ijTjeXmjQjBAMB0G
+A1UdDgQWBBQ64QmG1M8ZwpZ2dEl23OA1xmNjmjAOBgNVHQ8BAf8EBAMCAQYwDwYD
+VR0TAQH/BAUwAwEB/zAKBggqhkjOPQQDAwNoADBlAjA2Z6EWCNzklwBBHU6+4WMB
+zzuqQhFkoJ2UOQIReVx7Hfpkue4WQrO/isIJxOzksU0CMQDpKmFHjFJKS04YcPbW
+RNZu9YO6bVi9JNlWSOrvxKJGgYhqOkbRqZtNyWHa0V1Xahg=
 -----END CERTIFICATE-----
 )EOF";
 
@@ -174,22 +168,22 @@ void callback(char *topic, byte *payload, unsigned int length)
         Serial.print("Email: "); Serial.println(email);
         }
     }
+    else if (String(topic) == "esp32/auth/request") {
+        // Xử lý yêu cầu xác thực
+        handleAuthRequest(message);
+    }
     else if (String(topic) == "esp32/ota") {
-        // Parse URL và bắt đầu OTA
         JsonDocument doc;
         DeserializationError err = deserializeJson(doc, message);
         if (!err) {
         String firmwareUrl = doc["url"];
-        // Gọi hàm OTA cập nhật từ URL
         WiFiClientSecure otaClient;
-        if (firmwareUrl.indexOf("github.io") >= 0 || firmwareUrl.indexOf("githubusercontent.com") >= 0) {
-            otaClient.setCACert(letsEncryptRootCert);  // bạn sẽ thêm CA này ở dưới
-        } else {
-            otaClient.setInsecure();  // fallback nếu cần
-        }
+        otaClient.setInsecure(); 
+
         Serial.println("=== OTA yêu cầu nhận được ===");
         Serial.println("URL OTA: " + firmwareUrl);
         Serial.println("=============================");
+
         t_httpUpdate_return ret = httpUpdate.update(otaClient, firmwareUrl);
         switch (ret) {
             case HTTP_UPDATE_FAILED:
@@ -240,7 +234,8 @@ void InitMQTT()
     if (client.connect(clientId.c_str(), IO_USERNAME.c_str(), IO_KEY.c_str()))
     {
         Serial.println("MQTT Connected");
-
+        // Cập nhật trạng thái hệ thống khi MQTT kết nối thành công
+        updateSystemStatus();
     }
     else
     {
@@ -254,6 +249,7 @@ void InitMQTT()
         client.subscribe("esp32/control/color");
         client.subscribe("esp32/config/threshold");
         client.subscribe("esp32/ota");
+        client.subscribe("esp32/auth/request");  // Subscribe topic xác thực
 }
 
 void reconnectMQTT()
@@ -289,4 +285,59 @@ String getCurrentMQTTServer() {
 
 bool isMQTTConnected() {
     return client.connected();
+}
+
+void handleAuthRequest(String message) {
+    Serial.println("=== Auth Request Received ===");
+    Serial.println("Message: " + message);
+    
+    // Parse JSON message
+    JsonDocument doc;
+    DeserializationError err = deserializeJson(doc, message);
+    if (!err) {
+        String requestUsername = doc["username"].as<String>();
+        String requestPassword = doc["password"].as<String>();
+        
+        Serial.println("Request Username: " + requestUsername);
+        Serial.println("Request Password: " + String(requestPassword.length() > 0 ? "****" : "empty"));
+        
+        // Lấy thông tin tài khoản đã lưu
+        String savedUsername = getCurrentAccountUsername();
+        String savedPassword = getCurrentAccountPassword();
+        
+        Serial.println("Saved Username: " + savedUsername);
+        Serial.println("Saved Password: " + String(savedPassword.length() > 0 ? "****" : "empty"));
+        
+        // So sánh thông tin
+        bool isAuthenticated = false;
+        if (requestUsername == savedUsername && requestPassword == savedPassword) {
+            isAuthenticated = true;
+            Serial.println("Authentication: ACCEPTED");
+        } else {
+            Serial.println("Authentication: REJECTED");
+        }
+        
+        // Tạo response JSON
+        JsonDocument responseDoc;
+        responseDoc["status"] = isAuthenticated ? "accept" : "no";
+        responseDoc["message"] = isAuthenticated ? "Authentication successful" : "Invalid credentials";
+        
+        String responseJson;
+        serializeJson(responseDoc, responseJson);
+        
+        // Gửi response
+        client.publish("esp32/auth/response", responseJson.c_str());
+        Serial.println("Response sent: " + responseJson);
+    } else {
+        Serial.println("Failed to parse auth request JSON");
+        // Gửi response lỗi
+        JsonDocument errorDoc;
+        errorDoc["status"] = "no";
+        errorDoc["message"] = "Invalid JSON format";
+        
+        String errorJson;
+        serializeJson(errorDoc, errorJson);
+        client.publish("esp32/auth/response", errorJson.c_str());
+    }
+    Serial.println("=============================");
 }

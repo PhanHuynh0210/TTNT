@@ -14,4 +14,7 @@ String getCurrentMQTTUsername();
 String getCurrentMQTTServer();
 bool isMQTTConnected();
 
+// Function xử lý xác thực
+void handleAuthRequest(String message);
+
 #endif /* INC_TASKMQTT_H_ */

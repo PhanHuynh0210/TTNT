@@ -6,30 +6,32 @@ String header;
 const char* ap_ssid = "ESP32_Config";
 const char* ap_password = "12345678";
 
-// Biến để theo dõi trạng thái AP
 bool apMode = false;
+unsigned long apStartTime = 0;  // Thời điểm bắt đầu AP
+const unsigned long AP_TIMEOUT = 15 * 60 * 1000;  // 15 phút = 15 * 60 * 1000 ms
 
-// Function kiểm tra nút boot
 bool checkBootButton() {
-  const int BOOT_PIN = 0;  // Pin 0 là nút boot trên ESP32
-  const unsigned long HOLD_TIME = 3000;  // 3 giây
+  const int BOOT_PIN = 0;  
+  const unsigned long HOLD_TIME = 3000;  
   
-  pinMode(BOOT_PIN, INPUT);
+  pinMode(BOOT_PIN, INPUT_PULLUP);
   
-  Serial.println("Kiểm tra nút boot...");
   Serial.println("Nhấn giữ nút BOOT trong 3 giây để vào chế độ Access Point");
   
   unsigned long startTime = millis();
   bool buttonPressed = false;
   
   while (millis() - startTime < HOLD_TIME) {
-    if (digitalRead(BOOT_PIN) == LOW) {  // Nút được nhấn (LOW vì có pull-up)
+    if (digitalRead(BOOT_PIN) == LOW) { 
       buttonPressed = true;
       Serial.print(".");
+      // Hiển thị đèn vàng nhấp nháy nhanh khi đang nhấn nút
+      setStatus(STATUS_BOOTING);
       delay(100);
     } else {
       if (buttonPressed) {
         Serial.println("\nNút boot được thả ra sớm!");
+        setStatus(STATUS_NORMAL);
         return false;
       }
     }
@@ -50,25 +52,21 @@ void initAPConditional() {
   if (checkBootButton()) {
     apMode = true;
     initAP();
-  } else {
-    apMode = false;
-    Serial.println("Không vào chế độ Access Point.");
   }
 }
 
-// Function kiểm tra có đang ở chế độ AP không
 bool isAPMode() {
   return apMode;
 }
 
-// Function tắt Access Point
 void stopAP() {
   if (apMode) {
-    Serial.println("Tắt Access Point...");
-    WiFi.softAPdisconnect(true);  // Tắt AP và xóa cấu hình
-    apServer.stop();  // Dừng server
+    WiFi.softAPdisconnect(true);
+    apServer.stop(); 
     apMode = false;
-    Serial.println("Access Point đã được tắt.");
+    
+    // Tắt đèn tín hiệu AP và chuyển về trạng thái bình thường
+    setStatus(STATUS_NORMAL);
   }
 }
 
@@ -81,11 +79,23 @@ void initAP() {
   Serial.println(ap_password);
   Serial.println("http://192.168.4.1:90");
   apServer.begin();
+  
+  // Ghi lại thời điểm bắt đầu AP
+  apStartTime = millis();
+  
+  // Bật đèn tín hiệu xanh dương nhấp nháy cho chế độ AP
+  setStatus(STATUS_AP_MODE);
 }
 
 void accpoint() {
-  // Chỉ xử lý khi ở chế độ AP
   if (!apMode) {
+    return;
+  }
+  
+  // Kiểm tra timeout 15 phút
+  if (millis() - apStartTime > AP_TIMEOUT) {
+    Serial.println("Access Point timeout after 15 minutes. Stopping AP...");
+    stopAP();
     return;
   }
   
@@ -139,6 +149,9 @@ void accpoint() {
                 saveWiFi(ssid, pass);
                 String staIP = WiFi.localIP().toString();
                 Serial.println("IP Address: " + staIP);
+                
+                // Không tự động chuyển sang NORMAL, để updateSystemStatus() xử lý
+                // khi tất cả kết nối hoàn tất
 
                 // Gửi phản hồi HTML thông báo kết nối thành công
                 client.println("HTTP/1.1 200 OK");
@@ -151,33 +164,82 @@ void accpoint() {
                 client.println("body{font-family:sans-serif;text-align:center;background:#f0f0f0;padding:50px;}");
                 client.println(".card{display:inline-block;background:white;padding:30px;border-radius:10px;box-shadow:0 0 10px rgba(0,0,0,0.1);}");
                 client.println("h2{color:green;}");
+                client.println(".button{background:#dc3545;color:white;padding:10px 20px;border:none;border-radius:5px;text-decoration:none;display:inline-block;margin:10px;}");
+                client.println(".button:hover{background:#c82333;}");
                 client.println("</style></head><body>");
                 client.println("<div class='card'>");
-                client.println("<h2> Kết nối WiFi thành công!</h2>");
+                client.println("<h2>Kết nối WiFi thành công!</h2>");
                 client.println("<p>Địa chỉ IP của ESP32:</p>");
                 client.println("<p><strong>" + staIP + "</strong></p>");
-                client.println("<p>Access Point sẽ tự động tắt sau 3 giây.</p>");
+                client.println("<p>Access Point vẫn hoạt động để cấu hình MQTT.</p>");
+                client.println("<p>Bạn có thể:</p>");
+                client.println("<a href='/stop' class='button'>Tắt Access Point</a>");
+                client.println("<p><small>Hoặc AP sẽ tự động tắt sau 15 phút</small></p>");
                 client.println("</div>");
                 client.println("</body></html>");
                 client.println();
 
                 client.stop();
-                delay(3000);
-                
-                // Tắt Access Point thay vì restart
-                stopAP();
-                
-                // Khởi tạo lại các task cần thiết sau khi có WiFi
-                Serial.println("Khởi tạo lại các task sau khi có WiFi...");
-                initConnect();
-                Serial.println("Các task đã được khởi tạo lại thành công!");
-                
                 return;
               } else {
                 Serial.println("\n Failed to connect to new WiFi!");
                 Serial.println("Final WiFi Status: " + String(WiFi.status()));
+                
+                // Hiển thị đèn đỏ khi kết nối WiFi thất bại
+                setStatus(STATUS_ERROR);
+                delay(2000); // Hiển thị lỗi trong 2 giây
+                setStatus(STATUS_AP_MODE); // Quay lại trạng thái AP
                 break;
               }
+            }
+            else if (header.indexOf("GET /stop") >= 0) {
+              // Tắt Access Point thủ công
+              client.println("HTTP/1.1 200 OK");
+              client.println("Content-type:text/html");
+              client.println("Connection: close");
+              client.println();
+              client.println("<!DOCTYPE html><html><head><meta charset='UTF-8'>");
+              client.println("<title>AP Stopped</title>");
+              client.println("<style>");
+              client.println("body{font-family:sans-serif;text-align:center;background:#f0f0f0;padding:50px;}");
+              client.println(".card{display:inline-block;background:white;padding:30px;border-radius:10px;box-shadow:0 0 10px rgba(0,0,0,0.1);}");
+              client.println("h2{color:orange;}");
+              client.println("</style></head><body>");
+              client.println("<div class='card'>");
+              client.println("<h2>Access Point đã được tắt!</h2>");
+              client.println("<p>ESP32 sẽ khởi động lại để áp dụng cấu hình.</p>");
+              client.println("</div>");
+              client.println("</body></html>");
+              client.println();
+
+              client.stop();
+              delay(2000);
+              stopAP();
+              ESP.restart();
+              return;
+            }
+            else if (header.indexOf("GET /account?username=") >= 0) {
+              int usernameIndex = header.indexOf("username=") + 9;
+              int passwordIndex = header.indexOf("&password=") + 10;
+              int httpIndex = header.indexOf("HTTP");
+              
+              String username = header.substring(usernameIndex, passwordIndex - 10);
+              String password = header.substring(passwordIndex, httpIndex - 1);
+              
+              username.replace("%20", " ");
+              password.replace("%20", " ");
+
+              Serial.println("Received Account settings:");
+              Serial.println("Username: " + username);
+              Serial.println(String("Password: ") + (password.length() > 0 ? "****" : "empty"));
+
+              saveAccountSettings(username, password);
+              client.println("HTTP/1.1 200 OK");
+              client.println("Content-type:text/plain");
+              client.println();
+              client.println("SAVED");
+
+              break;
             }
             else if (header.indexOf("GET /mqtt?server=") >= 0) {
               int serverIndex = header.indexOf("server=") + 7;
@@ -232,6 +294,16 @@ void accpoint() {
             client.println("<div class='container'>");
             client.println("<h1>ESP32 Configuration</h1>");
             
+            // Hiển thị thông tin thời gian còn lại
+            unsigned long remainingTime = (AP_TIMEOUT - (millis() - apStartTime)) / 1000; // Chuyển về giây
+            unsigned long minutes = remainingTime / 60;
+            unsigned long seconds = remainingTime % 60;
+            
+            client.println("<div class='highlight'>");
+            client.println("<strong>⏰ Thời gian còn lại: " + String(minutes) + ":" + String(seconds < 10 ? "0" : "") + String(seconds) + "</strong>");
+            client.println("<br><small>Access Point sẽ tự động tắt sau 15 phút</small>");
+            client.println("</div>");
+            
             
             client.println("<div class='card'>");
             client.println("<h2>WiFi Settings</h2>");
@@ -262,6 +334,31 @@ void accpoint() {
             client.println("</form>");
             client.println("<div id='mqttMessage' class='success' style='display:none;'>Đã lưu cấu hình MQTT thành công!</div>");
             client.println("</div>");
+            
+            // Thêm form tài khoản
+            String currentAccountUsername = getCurrentAccountUsername();
+            client.println("<div class='card'>");
+            client.println("<h2>Account Settings</h2>");
+            client.println("<div class='mqtt-info'>");
+            client.println("<strong>Tài khoản hiện tại:</strong><br>");
+            client.println("Username: " + (currentAccountUsername.length() > 0 ? currentAccountUsername : "Chưa cấu hình"));
+            client.println("</div>");
+            
+            client.println("<form id='accountForm' onsubmit='submitAccount(event)'>");
+            client.println("<input id='accountUsername' placeholder='Tài khoản' required>");
+            client.println("<input id='accountPassword' type='password' placeholder='Mật khẩu' required>");
+            client.println("<button type='submit'>Lưu Tài Khoản</button>");
+            client.println("</form>");
+            client.println("<div id='accountMessage' class='success' style='display:none;'>Đã lưu tài khoản thành công!</div>");
+            client.println("</div>");
+            
+            // Thêm nút tắt Access Point
+            client.println("<div class='card'>");
+            client.println("<h2>Quản lý Access Point</h2>");
+            client.println("<p>Khi đã cấu hình xong, bạn có thể tắt Access Point:</p>");
+            client.println("<a href='/stop' class='button' style='background:#dc3545;color:white;padding:12px;text-decoration:none;border-radius:5px;display:inline-block;'>🛑 Tắt Access Point</a>");
+            client.println("<p><small>Hoặc chờ 15 phút để tự động tắt</small></p>");
+            client.println("</div>");
 
             client.println("<script>");
             client.println("function submitMQTT(event) {");
@@ -280,6 +377,43 @@ void accpoint() {
             client.println("      }");
             client.println("    });");
             client.println("}");
+            client.println("");
+            client.println("function submitAccount(event) {");
+            client.println("  event.preventDefault();");
+            client.println("  const username = document.getElementById('accountUsername').value;");
+            client.println("  const password = document.getElementById('accountPassword').value;");
+            client.println("  const url = `/account?username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`;");
+            client.println("  fetch(url)");
+            client.println("    .then(res => res.text())");
+            client.println("    .then(text => {");
+            client.println("      if (text.trim() === 'SAVED') {");
+            client.println("        const msg = document.getElementById('accountMessage');");
+            client.println("        msg.style.display = 'block';");
+            client.println("        setTimeout(() => msg.style.display = 'none', 3000);");
+            client.println("        // Cập nhật hiển thị username hiện tại");
+            client.println("        const currentUser = document.querySelector('.mqtt-info strong').nextSibling.nextSibling;");
+            client.println("        if (currentUser) {");
+            client.println("          currentUser.textContent = 'Username: ' + username;");
+            client.println("        }");
+            client.println("      }");
+            client.println("    });");
+            client.println("}");
+            client.println("");
+            client.println("// Cập nhật thời gian còn lại mỗi giây");
+            client.println("let remainingSeconds = " + String(remainingTime) + ";");
+            client.println("setInterval(() => {");
+            client.println("  remainingSeconds--;");
+            client.println("  if (remainingSeconds <= 0) {");
+            client.println("    document.body.innerHTML = '<div style=\"text-align:center;padding:50px;\"><h2>Access Point đã tự động tắt</h2><p>ESP32 sẽ khởi động lại...</p></div>';");
+            client.println("  } else {");
+            client.println("    const minutes = Math.floor(remainingSeconds / 60);");
+            client.println("    const seconds = remainingSeconds % 60;");
+            client.println("    const timeDisplay = document.querySelector('.highlight strong');");
+            client.println("    if (timeDisplay) {");
+            client.println("      timeDisplay.textContent = '⏰ Thời gian còn lại: ' + minutes + ':' + (seconds < 10 ? '0' : '') + seconds;");
+            client.println("    }");
+            client.println("  }");
+            client.println("}, 1000);");
             client.println("</script>");
 
             
@@ -302,9 +436,58 @@ void accpoint() {
 
 
 
+unsigned long getAPRemainingTime() {
+  if (!apMode) {
+    return 0;
+  }
+  unsigned long elapsed = millis() - apStartTime;
+  if (elapsed >= AP_TIMEOUT) {
+    return 0;
+  }
+  return AP_TIMEOUT - elapsed;
+}
+
+// Function để lưu thông tin tài khoản vào Preferences
+void saveAccountSettings(String username, String password) {
+  Preferences accountPrefs;
+  accountPrefs.begin("account-config", false);
+  accountPrefs.putString("username", username);
+  accountPrefs.putString("password", password);
+  accountPrefs.end();
+  Serial.println("Account settings saved successfully!");
+}
+
+// Function để đọc username từ Preferences
+String getCurrentAccountUsername() {
+  Preferences accountPrefs;
+  accountPrefs.begin("account-config", true);
+  String username = accountPrefs.getString("username", "");
+  accountPrefs.end();
+  return username;
+}
+
+// Function để đọc password từ Preferences
+String getCurrentAccountPassword() {
+  Preferences accountPrefs;
+  accountPrefs.begin("account-config", true);
+  String password = accountPrefs.getString("password", "");
+  accountPrefs.end();
+  return password;
+}
+
+// Function để xóa thông tin tài khoản
+void clearAccountSettings() {
+  Preferences accountPrefs;
+  accountPrefs.begin("account-config", false);
+  accountPrefs.clear();
+  accountPrefs.end();
+  Serial.println("Account settings cleared successfully!");
+}
+
 void clearAllSettings() {
   Serial.println("Clearing all settings...");
   clearWiFiSettings();
   clearMQTTSettings();
+  clearAccountSettings();
   Serial.println("All settings cleared successfully!");
 }
