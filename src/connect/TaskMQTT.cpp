@@ -2,6 +2,7 @@
 #include "TaskAccesspoint.h"
 
 Preferences mqttPrefs;
+Preferences otaPrefs;
 
 String MQTT_SERVER = server_mqtt;
 int MQTT_PORT = mqtt_port;
@@ -201,28 +202,46 @@ void callback(char *topic, byte *payload, unsigned int length)
         DeserializationError err = deserializeJson(doc, message);
         if (!err) {
         String firmwareUrl = doc["url"];
+        String version = doc["version"] | "unknown";
+
         WiFiClientSecure otaClient;
         otaClient.setInsecure(); 
+
+        otaPrefs.begin("ota-info", false);
+        otaPrefs.putString("version", version);
+        otaPrefs.end();
 
         Serial.println("=== OTA yêu cầu nhận được ===");
         Serial.println("URL OTA: " + firmwareUrl);
         Serial.println("=============================");
 
+        // Chuyển sang trạng thái OTA update - đèn cam nhấp nháy
+        setStatus(STATUS_OTA_UPDATE);
+        
         t_httpUpdate_return ret = httpUpdate.update(otaClient, firmwareUrl);
         switch (ret) {
             case HTTP_UPDATE_FAILED:
                 Serial.printf("OTA thất bại: %s\n", httpUpdate.getLastErrorString().c_str());
+                setStatus(STATUS_ERROR);
                 break;
             case HTTP_UPDATE_NO_UPDATES:
                 Serial.println("Không có phiên bản mới.");
+                setStatus(STATUS_NORMAL);
                 break;
             case HTTP_UPDATE_OK:
                 Serial.println("OTA thành công. ESP sẽ khởi động lại.");
+                // Giữ trạng thái OTA_UPDATE cho đến khi restart
                 break;
-
         }
     }
     }
+    else if (String(topic) == "esp32/ota/version") {
+    otaPrefs.begin("ota-info", true);
+    String currentVersion = otaPrefs.getString("version", "unknown");
+    otaPrefs.end();
+    client.publish("esp32/ota/version/response", currentVersion.c_str());
+}
+
 }
 
 void publishData(String feed, String data)
@@ -274,6 +293,7 @@ void InitMQTT()
         client.subscribe("esp32/config/threshold");
         client.subscribe("esp32/ota");
         client.subscribe("esp32/auth/request");  // Subscribe topic xác thực
+        client.subscribe("esp32/ota/version"); 
 }
 
 void reconnectMQTT()

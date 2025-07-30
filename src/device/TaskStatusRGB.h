@@ -7,7 +7,8 @@ enum SystemStatus {
     STATUS_BOOTING,           // Khởi động
     STATUS_NORMAL,            // Hoạt động bình thường
     STATUS_ERROR,             // Lỗi kết nối
-    STATUS_AP_MODE            // Chế độ Access Point
+    STATUS_AP_MODE,           // Chế độ Access Point
+    STATUS_OTA_UPDATE         // Cập nhật OTA
 };
 
 extern void TaskStatusRGB(void *pvParameters);

@@ -13,10 +13,11 @@ const uint32_t statusColors[] = {
     0xFFFF00,  // STATUS_BOOTING - Vàng
     0x00FF00,  // STATUS_NORMAL - Xanh lá
     0xFF0000,  // STATUS_ERROR - Đỏ
-    0x0000FF   // STATUS_AP_MODE - Xanh dương
+    0x0000FF,  // STATUS_AP_MODE - Xanh dương
+    0xffffff   // STATUS_OTA_UPDATE - 
 };
 
-const uint16_t blinkIntervals[] = {500, 0, 200, 1000};
+const uint16_t blinkIntervals[] = {500, 1000, 200, 1000, 300};
 
 void TaskStatusRGB(void *pvParameters)
 {

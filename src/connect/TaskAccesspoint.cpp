@@ -95,6 +95,38 @@ void accpoint() {
   // Kiểm tra timeout 15 phút
   if (millis() - apStartTime > AP_TIMEOUT) {
     Serial.println("Access Point timeout after 15 minutes. Stopping AP...");
+    // Gửi thông báo timeout trước khi tắt AP
+    WiFiClient timeoutClient = apServer.available();
+    if (timeoutClient) {
+      timeoutClient.println("HTTP/1.1 200 OK");
+      timeoutClient.println("Content-type:text/html");
+      timeoutClient.println("Connection: close");
+      timeoutClient.println();
+      timeoutClient.println("<!DOCTYPE html><html><head><meta charset='UTF-8'>");
+      timeoutClient.println("<title>AP Timeout</title>");
+      timeoutClient.println("<style>");
+      timeoutClient.println("body{font-family:sans-serif;text-align:center;background:#f0f0f0;padding:50px;}");
+      timeoutClient.println(".card{display:inline-block;background:white;padding:30px;border-radius:10px;box-shadow:0 0 10px rgba(0,0,0,0.1);}");
+      timeoutClient.println("h2{color:orange;}");
+      timeoutClient.println(".redirect{color:#007cba;margin-top:20px;}");
+      timeoutClient.println("</style>");
+      timeoutClient.println("<script>");
+      timeoutClient.println("setTimeout(function() {");
+      timeoutClient.println("  window.location.href = 'https://esp-web-80490.web.app/';");
+      timeoutClient.println("}, 3000);");
+      timeoutClient.println("</script>");
+      timeoutClient.println("</head><body>");
+      timeoutClient.println("<div class='card'>");
+      timeoutClient.println("<h2>⏰ Access Point đã tự động tắt!</h2>");
+      timeoutClient.println("<p>Hết thời gian cấu hình (15 phút).</p>");
+      timeoutClient.println("<p class='redirect'>Tự động chuyển đến trang web điều khiển trong 3 giây...</p>");
+      timeoutClient.println("<p><a href='https://esp-web-80490.web.app/' style='color:#007cba;text-decoration:none;'>Nhấn vào đây nếu không tự động chuyển</a></p>");
+      timeoutClient.println("</div>");
+      timeoutClient.println("</body></html>");
+      timeoutClient.println();
+      timeoutClient.stop();
+      delay(1000);
+    }
     stopAP();
     return;
   }
@@ -185,10 +217,9 @@ void accpoint() {
                 Serial.println("\n Failed to connect to new WiFi!");
                 Serial.println("Final WiFi Status: " + String(WiFi.status()));
                 
-                // Hiển thị đèn đỏ khi kết nối WiFi thất bại
                 setStatus(STATUS_ERROR);
                 delay(2000); // Hiển thị lỗi trong 2 giây
-                setStatus(STATUS_AP_MODE); // Quay lại trạng thái AP
+                setStatus(STATUS_AP_MODE); 
                 break;
               }
             }
@@ -203,18 +234,26 @@ void accpoint() {
               client.println("<style>");
               client.println("body{font-family:sans-serif;text-align:center;background:#f0f0f0;padding:50px;}");
               client.println(".card{display:inline-block;background:white;padding:30px;border-radius:10px;box-shadow:0 0 10px rgba(0,0,0,0.1);}");
-              client.println("h2{color:orange;}");
-              client.println("</style></head><body>");
+              client.println("h2{color:green;}");
+              client.println(".redirect{color:#007cba;margin-top:20px;}");
+              client.println("</style>");
+              client.println("<script>");
+              client.println("setTimeout(function() {");
+              client.println("  window.location.href = 'https://esp-web-80490.web.app/';");
+              client.println("}, 3000);");
+              client.println("</script>");
+              client.println("</head><body>");
               client.println("<div class='card'>");
-              client.println("<h2>Access Point đã được tắt!</h2>");
-              client.println("<p>ESP32 sẽ khởi động lại để áp dụng cấu hình.</p>");
+              client.println("<h2> Access Point tắt!</h2>");
+              client.println("<p>Cấu hình đã được lưu thành công.</p>");
+              client.println("<p class='redirect'>Tự động chuyển đến trang web điều khiển trong 3 giây...</p>");
+              client.println("<p><a href='https://esp-web-80490.web.app/' style='color:#007cba;text-decoration:none;'>Nhấn vào đây nếu không tự động chuyển</a></p>");
               client.println("</div>");
               client.println("</body></html>");
               client.println();
 
               client.stop();
-              delay(2000);
-              stopAP();
+              delay(1000);
               ESP.restart();
               return;
             }
@@ -457,6 +496,7 @@ void saveAccountSettings(String username, String password) {
   Serial.println("Account settings saved successfully!");
 }
 
+// Function để đọc  từ Preferences
 String getCurrentAccountUsername() {
   Preferences accountPrefs;
   accountPrefs.begin("account-config", true);
