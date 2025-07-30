@@ -18,6 +18,13 @@ float thresholdLux = 400.0;
 float thresholdSoli = 300.0;
 float thresholdDistance = 50.0;
 
+String opTemp;
+String opHumid;
+String opSoli;
+String opLux;
+String opDistance;
+extern
+
 unsigned long lastMailTime = 0;
 const unsigned long MAIL_INTERVAL = 60000; 
 
@@ -95,21 +102,43 @@ void handleLEDCControl(String msg) {
     Serial.println(jsonData);
     DeserializationError error = deserializeJson(doc, jsonData);
     if (!error) {
-    email = doc["email"].as<String>();
-    thresholdTemp = doc["thresholdTemp"].as<float>();
-    thresholdHumid = doc["thresholdHumid"].as<float>();
-    thresholdLux = doc["thresholdLux"].as<float>();
-    thresholdSoli = doc["thresholdSoli"].as<float>();
-    thresholdDistance = doc["thresholdDistance"].as<float>();
+    if (doc.containsKey("temp")) {
+      thresholdTemp     = doc["temp"]["value"].as<String>().toFloat();
+      opTemp            = doc["temp"]["op"].as<String>();
+    }
+    if (doc.containsKey("humid")) {
+      thresholdHumid    = doc["humid"]["value"].as<String>().toFloat();
+      opHumid           = doc["humid"]["op"].as<String>();
+    }
+    if (doc.containsKey("soli")) {
+      thresholdSoli     = doc["soli"]["value"].as<String>().toFloat();
+      opSoli            = doc["soli"]["op"].as<String>();
+    }
+    if (doc.containsKey("lux")) {
+      thresholdLux      = doc["lux"]["value"].as<String>().toFloat();
+      opLux             = doc["lux"]["op"].as<String>();
+    }
+    if (doc.containsKey("distance")) {
+      thresholdDistance = doc["distance"]["value"].as<String>().toFloat();
+      opDistance        = doc["distance"]["op"].as<String>();
+    }
+    if (doc.containsKey("email")) {
+      email = doc["email"].as<String>();
+}
+
 
     // Lưu vào Preferences
     SensorPrefs.begin("sensor-config", false);
-    SensorPrefs.putString("email", email);
     SensorPrefs.putFloat("temp", thresholdTemp);
+    SensorPrefs.putString("tempOp", opTemp);
     SensorPrefs.putFloat("humid", thresholdHumid);
+    SensorPrefs.putString("humidOp", opHumid);
     SensorPrefs.putFloat("lux", thresholdLux);
+    SensorPrefs.putString("luxOp", opLux);
     SensorPrefs.putFloat("soli", thresholdSoli);
+    SensorPrefs.putString("soliOp", opSoli);
     SensorPrefs.putFloat("distance", thresholdDistance);
+    SensorPrefs.putString("distanceOp", opDistance);
     SensorPrefs.end();
 
       // Phản hồi client
@@ -197,6 +226,16 @@ if (!LittleFS.begin(true)) {
   Serial.println("IP Address: " + staIP);
   Serial.println("HTTP + WS server started");
 }
+bool compare(float value, String op, float threshold) {
+  if (op == ">")  return value > threshold;
+  if (op == ">=") return value >= threshold;
+  if (op == "<")  return value < threshold;
+  if (op == "<=") return value <= threshold;
+  if (op == "==") return value == threshold;
+  if (op == "!=") return value != threshold;
+  return false; // Không khớp toán tử nào
+}
+
 
 void loopWebServer() {
   static unsigned long lastTime = 0;
@@ -228,26 +267,31 @@ void loopWebServer() {
       bool shouldAlert = false;
       String reason = "";
 
-      if (temp > thresholdTemp) {
-        shouldAlert = true;
-        reason += "Nhiệt độ vượt ngưỡng (" + String(temp) + "°C > " + String(thresholdTemp) + "°C)<br>";
-      }
-      if (humid > thresholdHumid) {
-        shouldAlert = true;
-        reason += "Độ ẩm vượt ngưỡng (" + String(humid) + "% > " + String(thresholdHumid) + "%)<br>";
-      }
-      if (lux > thresholdLux) {
-        shouldAlert = true;
-        reason += "Ánh sáng vượt ngưỡng (" + String(lux) + " lux > " + String(thresholdLux) + " lux)<br>";
-      }
-      if (soli > thresholdSoli) {
-        shouldAlert = true;
-        reason += "Độ ẩm đất vượt ngưỡng (" + String(soli) + " > " + String(thresholdSoli) + ")<br>";
-      }
-      if (distance < thresholdDistance) {
-        shouldAlert = true;
-        reason += "Có vật cản gần (" + String(distance) + " cm < " + String(thresholdDistance) + " cm)<br>";
-      }
+     if (compare(temp, opTemp, thresholdTemp)) {
+      shouldAlert = true;
+      reason += "Nhiệt độ vi phạm ngưỡng (" + String(temp) + "°C " + opTemp + " " + String(thresholdTemp) + "°C)<br>";
+    }
+
+    if (compare(humid, opHumid, thresholdHumid)) {
+      shouldAlert = true;
+      reason += "Độ ẩm vi phạm ngưỡng (" + String(humid) + "% " + opHumid + " " + String(thresholdHumid) + "%)<br>";
+    }
+
+    if (compare(lux, opLux, thresholdLux)) {
+      shouldAlert = true;
+      reason += "Ánh sáng vi phạm ngưỡng (" + String(lux) + " lux " + opLux + " " + String(thresholdLux) + " lux)<br>";
+    }
+
+    if (compare(soli, opSoli, thresholdSoli)) {
+      shouldAlert = true;
+      reason += "Độ ẩm đất vi phạm ngưỡng (" + String(soli) + " " + opSoli + " " + String(thresholdSoli) + ")<br>";
+    }
+
+    if (compare(distance, opDistance, thresholdDistance)) {
+      shouldAlert = true;
+      reason += "Có vật cản gần (" + String(distance) + " cm " + opDistance + " " + String(thresholdDistance) + " cm)<br>";
+    }
+
 
       if (shouldAlert && email.length() > 5) {
         unsigned long now = millis();

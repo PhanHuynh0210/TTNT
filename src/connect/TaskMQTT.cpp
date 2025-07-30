@@ -128,6 +128,12 @@ void clearMQTTSettings() {
     IO_USERNAME = "";
     IO_KEY = "";
 }
+float parseValue(const JsonVariant &v) {
+  if (v.is<float>()) return v.as<float>();
+  if (v.is<const char*>()) return String(v.as<const char*>()).toFloat();
+  return 0.0;
+}
+
 
 void callback(char *topic, byte *payload, unsigned int length)
 {
@@ -153,19 +159,37 @@ void callback(char *topic, byte *payload, unsigned int length)
         JsonDocument doc;
         DeserializationError err = deserializeJson(doc, message);
         if (!err) {
-        thresholdTemp = doc["temp"];
-        thresholdHumid = doc["humid"];
-        thresholdSoli = doc["soli"];
-        thresholdLux = doc["lux"];
-        thresholdDistance = doc["distance"];
-        email = doc["email"].as<String>();
+        if (doc.containsKey("temp")) {
+            thresholdTemp = parseValue(doc["temp"]["value"]);
+            opTemp = doc["temp"]["op"].as<String>();
+        }
+        if (doc.containsKey("humid")) {
+            thresholdHumid = parseValue(doc["humid"]["value"]);
+            opHumid = doc["humid"]["op"].as<String>();
+        }
+        if (doc.containsKey("soli")) {
+            thresholdSoli = parseValue(doc["soli"]["value"]);
+            opSoli = doc["soli"]["op"].as<String>();
+        }
+        if (doc.containsKey("lux")) {
+            thresholdLux = parseValue(doc["lux"]["value"]);
+            opLux = doc["lux"]["op"].as<String>();
+        }
+        if (doc.containsKey("distance")) {
+            thresholdDistance = parseValue(doc["distance"]["value"]);
+            opDistance = doc["distance"]["op"].as<String>();
+        }
+        if (doc.containsKey("email")) {
+            email = doc["email"].as<String>();
+        }
 
-        Serial.print("Temp: "); Serial.println(thresholdTemp);
-        Serial.print("Humid: "); Serial.println(thresholdHumid);
-        Serial.print("Soli: "); Serial.println(thresholdSoli);
-        Serial.print("Lux: "); Serial.println(thresholdLux);
-        Serial.print("Distance: "); Serial.println(thresholdDistance);
-        Serial.print("Email: "); Serial.println(email);
+        Serial.println("✔ Cập nhật ngưỡng và toán tử:");
+        Serial.printf("  Temp: %s %.2f\n", opTemp.c_str(), thresholdTemp);
+        Serial.printf("  Humid: %s %.2f\n", opHumid.c_str(), thresholdHumid);
+        Serial.printf("  Soli: %s %.2f\n", opSoli.c_str(), thresholdSoli);
+        Serial.printf("  Lux: %s %.2f\n", opLux.c_str(), thresholdLux);
+        Serial.printf("  Distance: %s %.2f\n", opDistance.c_str(), thresholdDistance);
+        Serial.println("  Email: " + email);
         }
     }
     else if (String(topic) == "esp32/auth/request") {

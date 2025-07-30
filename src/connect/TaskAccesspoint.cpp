@@ -300,7 +300,7 @@ void accpoint() {
             unsigned long seconds = remainingTime % 60;
             
             client.println("<div class='highlight'>");
-            client.println("<strong>⏰ Thời gian còn lại: " + String(minutes) + ":" + String(seconds < 10 ? "0" : "") + String(seconds) + "</strong>");
+            client.println("<strong>Thời gian còn lại: " + String(minutes) + ":" + String(seconds < 10 ? "0" : "") + String(seconds) + "</strong>");
             client.println("<br><small>Access Point sẽ tự động tắt sau 15 phút</small>");
             client.println("</div>");
             
@@ -326,8 +326,8 @@ void accpoint() {
             
 
             client.println("<form id='mqttForm' onsubmit='submitMQTT(event)'>");
-            client.println("<input id='mqttServer' placeholder='MQTT Server (vd: io.adafruit.com)' value='io.adafruit.com' required>");
-            client.println("<div class='note'>Mặc định: io.adafruit.com (port 1883)</div>");
+            client.println("<input id='mqttServer' placeholder='MQTT Server (vd: m811669b.ala.asia-southeast1.emqxsl.com' value='io.adafruit.com' required>");
+            client.println("<div class='note'>Mặc định: m811669b.ala.asia-southeast1.emqxsl.com (port 8883)</div>");
             client.println("<input id='mqttUsername' placeholder='MQTT Username' required>");
             client.println("<input id='mqttKey' type='password' placeholder='MQTT Key/Password' required>");
             client.println("<button type='submit'>Save MQTT Settings</button>");
@@ -339,7 +339,7 @@ void accpoint() {
             String currentAccountUsername = getCurrentAccountUsername();
             client.println("<div class='card'>");
             client.println("<h2>Account Settings</h2>");
-            client.println("<div class='mqtt-info'>");
+            client.println("<div class='account-info'>");
             client.println("<strong>Tài khoản hiện tại:</strong><br>");
             client.println("Username: " + (currentAccountUsername.length() > 0 ? currentAccountUsername : "Chưa cấu hình"));
             client.println("</div>");
@@ -391,7 +391,7 @@ void accpoint() {
             client.println("        msg.style.display = 'block';");
             client.println("        setTimeout(() => msg.style.display = 'none', 3000);");
             client.println("        // Cập nhật hiển thị username hiện tại");
-            client.println("        const currentUser = document.querySelector('.mqtt-info strong').nextSibling.nextSibling;");
+            client.println("        const currentUser = document.querySelector('.account-info strong').nextSibling.nextSibling;");
             client.println("        if (currentUser) {");
             client.println("          currentUser.textContent = 'Username: ' + username;");
             client.println("        }");
@@ -457,7 +457,6 @@ void saveAccountSettings(String username, String password) {
   Serial.println("Account settings saved successfully!");
 }
 
-// Function để đọc username từ Preferences
 String getCurrentAccountUsername() {
   Preferences accountPrefs;
   accountPrefs.begin("account-config", true);
@@ -466,7 +465,6 @@ String getCurrentAccountUsername() {
   return username;
 }
 
-// Function để đọc password từ Preferences
 String getCurrentAccountPassword() {
   Preferences accountPrefs;
   accountPrefs.begin("account-config", true);

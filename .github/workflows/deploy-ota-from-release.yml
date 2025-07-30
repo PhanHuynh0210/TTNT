@@ -26,8 +26,11 @@ jobs:
           path: gh-pages
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Copy firmware to gh-pages
-        run: cp ./firmware/firmware.bin gh-pages/
+      - name: Rename and copy firmware to gh-pages
+        run: |
+          VERSION=${{ github.ref_name }}
+          cp ./firmware/firmware.bin gh-pages/firmware_${VERSION}.bin
+
 
       - name: Configure Git identity
         run: |
