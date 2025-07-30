@@ -26,13 +26,11 @@ jobs:
           path: gh-pages
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Rename and copy firmware to gh-pages
+      - name: Copy firmware to gh-pages
         run: |
-          cd gh-pages
-          git add ${VERSION}/firmware.bin
-          git commit -m "Add firmware for ${VERSION}" || echo "No changes to commit"
-          git push origin gh-pages
-
+          VERSION=${{ github.ref_name }}
+          mkdir -p gh-pages/${VERSION}
+          cp firmware/firmware.bin gh-pages/${VERSION}/firmware.bin
 
       - name: Configure Git identity
         run: |
@@ -42,6 +40,6 @@ jobs:
       - name: Commit and push to gh-pages
         run: |
           cd gh-pages
-          git add firmware.bin
-          git commit -m "Update firmware from release ${{ github.ref_name }}" || echo "No changes to commit"
+          git add .
+          git commit -m "Add firmware for version ${{ github.ref_name }}" || echo "No changes to commit"
           git push origin gh-pages
