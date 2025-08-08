@@ -144,7 +144,7 @@ void callback(char *topic, byte *payload, unsigned int length)
         message += (char)payload[i];
     }
     if (String(topic) == "esp32/control/led") {
-    digitalWrite(48, message == "1" ? HIGH : LOW);
+    digitalWrite(6, message == "1" ? HIGH : LOW);
     }
     else if (String(topic) == "esp32/control/rgb") {
         digitalWrite(6, message == "1" ? HIGH : LOW);

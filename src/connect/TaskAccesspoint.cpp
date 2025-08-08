@@ -117,7 +117,7 @@ void accpoint() {
       timeoutClient.println("</script>");
       timeoutClient.println("</head><body>");
       timeoutClient.println("<div class='card'>");
-      timeoutClient.println("<h2>⏰ Access Point đã tự động tắt!</h2>");
+      timeoutClient.println("<h2>Access Point đã tự động tắt!</h2>");
       timeoutClient.println("<p>Hết thời gian cấu hình (15 phút).</p>");
       timeoutClient.println("<p class='redirect'>Tự động chuyển đến trang web điều khiển trong 3 giây...</p>");
       timeoutClient.println("<p><a href='https://esp-web-80490.web.app/' style='color:#007cba;text-decoration:none;'>Nhấn vào đây nếu không tự động chuyển</a></p>");
@@ -144,7 +144,29 @@ void accpoint() {
 
         if (c == '\n') {
           if (currentLine.length() == 0) {
-            if (header.indexOf("GET /wifi?ssid=") >= 0) {
+            if (header.indexOf("GET /scan") >= 0) {
+              // Trả về danh sách WiFi dưới dạng JSON
+              client.println("HTTP/1.1 200 OK");
+              client.println("Content-type:application/json");
+              client.println("Access-Control-Allow-Origin: *");
+              client.println();
+              
+              int n = WiFi.scanNetworks();
+              client.print("[");
+              for (int i = 0; i < n; ++i) {
+                if (i > 0) client.print(",");
+                client.print("{\"ssid\":\"");
+                client.print(WiFi.SSID(i));
+                client.print("\",\"rssi\":");
+                client.print(WiFi.RSSI(i));
+                client.print(",\"encryption\":");
+                client.print(WiFi.encryptionType(i));
+                client.print("}");
+              }
+              client.print("]");
+              break;
+            }
+            else if (header.indexOf("GET /wifi?ssid=") >= 0) {
               int ssidIndex = header.indexOf("ssid=") + 5;
               int passIndex = header.indexOf("&pass=");
               int httpIndex = header.indexOf("HTTP");
@@ -322,13 +344,19 @@ void accpoint() {
             client.println(".card{background:#fff;padding:20px;border-radius:8px;margin-bottom:20px;box-shadow:0 0 10px rgba(0,0,0,0.1);}");
             client.println("h1{text-align:center;color:#007cba;margin-bottom:30px;}");
             client.println("h2{color:#007cba;margin-bottom:15px;border-bottom:2px solid #007cba;padding-bottom:5px;}");
-            client.println("input,button{width:100%;padding:12px;margin:8px 0;box-sizing:border-box;border-radius:5px;border:1px solid #ccc;}");
+            client.println("input,select,button{width:100%;padding:12px;margin:8px 0;box-sizing:border-box;border-radius:5px;border:1px solid #ccc;}");
             client.println("button{background:#007cba;color:white;border:none;cursor:pointer;}");
             client.println("button:hover{background:#005a87;}");
             client.println(".note{font-size:12px;color:#666;margin-top:5px;}");
             client.println(".success{background:#d4edda;color:#155724;padding:10px;border-radius:5px;margin-bottom:15px;}");
             client.println(".mqtt-info{background:#e7f3ff;padding:15px;border-radius:5px;margin-bottom:15px;border-left:4px solid #007cba;}");
             client.println(".highlight{background:#fff3cd;border:1px solid #ffeaa7;padding:10px;border-radius:5px;margin-bottom:15px;}");
+            client.println(".wifi-item{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #eee;}");
+            client.println(".wifi-name{font-weight:bold;}");
+            client.println(".wifi-strength{color:#666;font-size:12px;}");
+            client.println(".refresh-btn{background:#28a745;margin-bottom:15px;}");
+            client.println(".refresh-btn:hover{background:#218838;}");
+            client.println(".loading{text-align:center;color:#666;font-style:italic;}");
             client.println("</style></head><body>");
             client.println("<div class='container'>");
             client.println("<h1>ESP32 Configuration</h1>");
@@ -346,11 +374,18 @@ void accpoint() {
             
             client.println("<div class='card'>");
             client.println("<h2>WiFi Settings</h2>");
-            client.println("<form action='/wifi'>");
-            client.println("<input name='ssid' placeholder='WiFi SSID' required>");
-            client.println("<input name='pass' type='password' placeholder='WiFi Password'>");
-            client.println("<button type='submit'>Connect WiFi</button>");
+            client.println("<button onclick='scanWiFi()' class='refresh-btn'>🔄 Quét WiFi</button>");
+            client.println("<div id='wifiList'>");
+            client.println("<div class='loading'>Nhấn nút 'Quét WiFi' để tìm mạng WiFi</div>");
+            client.println("</div>");
+            client.println("<form id='wifiForm' style='display:none;'>");
+            client.println("<select id='wifiSelect' required>");
+            client.println("<option value=''>Chọn mạng WiFi...</option>");
+            client.println("</select>");
+            client.println("<input id='wifiPassword' type='password' placeholder='Mật khẩu WiFi'>");
+            client.println("<button type='submit'>Kết nối WiFi</button>");
             client.println("</form>");
+            client.println("<div id='wifiMessage' class='success' style='display:none;'></div>");
             client.println("</div>");
             
             String currentServer = getCurrentMQTTServer();
@@ -400,6 +435,63 @@ void accpoint() {
             client.println("</div>");
 
             client.println("<script>");
+            client.println("function scanWiFi() {");
+            client.println("  const wifiList = document.getElementById('wifiList');");
+            client.println("  wifiList.innerHTML = '<div class=\"loading\">Đang quét WiFi...</div>';");
+            client.println("  ");
+            client.println("  fetch('/scan')");
+            client.println("    .then(res => res.json())");
+            client.println("    .then(networks => {");
+            client.println("      if (networks.length === 0) {");
+            client.println("        wifiList.innerHTML = '<div class=\"loading\">Không tìm thấy mạng WiFi nào</div>';");
+            client.println("        return;");
+            client.println("      }");
+            client.println("      ");
+            client.println("      // Hiển thị danh sách WiFi");
+            client.println("      let html = '<h3>Mạng WiFi tìm thấy:</h3>';");
+            client.println("      networks.forEach(network => {");
+            client.println("        const strength = network.rssi > -50 ? 'Mạnh' : network.rssi > -70 ? 'Trung bình' : 'Yếu';");
+            client.println("        const strengthColor = network.rssi > -50 ? '#28a745' : network.rssi > -70 ? '#ffc107' : '#dc3545';");
+            client.println("        html += `<div class=\"wifi-item\">`;");
+            client.println("        html += `<span class=\"wifi-name\">${network.ssid}</span>`;");
+            client.println("        html += `<span class=\"wifi-strength\" style=\"color:${strengthColor}\">${strength} (${network.rssi}dBm)</span>`;");
+            client.println("        html += `</div>`;");
+            client.println("      });");
+            client.println("      wifiList.innerHTML = html;");
+            client.println("      ");
+            client.println("      // Cập nhật dropdown");
+            client.println("      const select = document.getElementById('wifiSelect');");
+            client.println("      select.innerHTML = '<option value=\"\">Chọn mạng WiFi...</option>';");
+            client.println("      networks.forEach(network => {");
+            client.println("        const option = document.createElement('option');");
+            client.println("        option.value = network.ssid;");
+            client.println("        option.textContent = `${network.ssid} (${network.rssi}dBm)`;");
+            client.println("        select.appendChild(option);");
+            client.println("      });");
+            client.println("      ");
+            client.println("      // Hiển thị form");
+            client.println("      document.getElementById('wifiForm').style.display = 'block';");
+            client.println("    })");
+            client.println("    .catch(err => {");
+            client.println("      wifiList.innerHTML = '<div class=\"loading\" style=\"color:#dc3545;\">Lỗi khi quét WiFi</div>';");
+            client.println("    });");
+            client.println("}");
+            client.println("");
+            client.println("// Xử lý form WiFi");
+            client.println("document.getElementById('wifiForm').addEventListener('submit', function(e) {");
+            client.println("  e.preventDefault();");
+            client.println("  const ssid = document.getElementById('wifiSelect').value;");
+            client.println("  const password = document.getElementById('wifiPassword').value;");
+            client.println("  ");
+            client.println("  if (!ssid) {");
+            client.println("    alert('Vui lòng chọn mạng WiFi');");
+            client.println("    return;");
+            client.println("  }");
+            client.println("  ");
+            client.println("  const url = `/wifi?ssid=${encodeURIComponent(ssid)}&pass=${encodeURIComponent(password)}`;");
+            client.println("  window.location.href = url;");
+            client.println("});");
+            client.println("");
             client.println("function submitMQTT(event) {");
             client.println("  event.preventDefault();");
             client.println("  const server = document.getElementById('mqttServer').value;");
@@ -449,7 +541,7 @@ void accpoint() {
             client.println("    const seconds = remainingSeconds % 60;");
             client.println("    const timeDisplay = document.querySelector('.highlight strong');");
             client.println("    if (timeDisplay) {");
-            client.println("      timeDisplay.textContent = '⏰ Thời gian còn lại: ' + minutes + ':' + (seconds < 10 ? '0' : '') + seconds;");
+            client.println("      timeDisplay.textContent = 'Thời gian còn lại: ' + minutes + ':' + (seconds < 10 ? '0' : '') + seconds;");
             client.println("    }");
             client.println("  }");
             client.println("}, 1000);");

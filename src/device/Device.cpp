@@ -1,7 +1,7 @@
 #include "Device.h"
 
 void initDevice(){
-    initDHT20();
+    // initDHT20();
     // initES35();  
     // initJXBS();
     // initkc();
