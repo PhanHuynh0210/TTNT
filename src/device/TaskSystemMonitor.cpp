@@ -7,7 +7,7 @@ void TaskSystemMonitor(void *pvParameters)
 {
     while (1)
     {
-        if (isAPMode()) {
+        if (isAPMode() || currentStatus == STATUS_BOOTING || currentStatus == STATUS_CONNECTING) {
             vTaskDelay(5000 / portTICK_PERIOD_MS);
             continue;
         }

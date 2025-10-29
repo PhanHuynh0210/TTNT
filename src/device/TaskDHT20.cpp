@@ -18,7 +18,6 @@ void getValueDHT20()
     }
     else
     {
-        Serial.println("Failed to read DHT20 sensor.");
     }
 }
 

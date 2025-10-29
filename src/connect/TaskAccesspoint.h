@@ -8,17 +8,22 @@ extern void initAP();
 extern void accpoint();
 extern void clearAllSettings();
 
-// Thêm các function mới
-extern bool checkBootButton();
-extern void initAPConditional();
+extern bool checkBootButtonNonBlocking();
 extern bool isAPMode();
 extern void stopAP(); 
-extern unsigned long getAPRemainingTime(); // Thêm function lấy thời gian còn lại
+extern unsigned long getAPRemainingTime(); 
 
-// Functions cho Account Settings
 extern void saveAccountSettings(String username, String password);
 extern String getCurrentAccountUsername();
 extern String getCurrentAccountPassword();
 extern void clearAccountSettings();
+
+// Function để vào AP mode từ web interface
+extern void enterAPMode();
+
+// Email settings functions
+extern void saveEmailSettings(String email);
+extern String getCurrentEmail();
+extern void clearEmailSettings();
 
 #endif // TASKACCESSPOINT_H

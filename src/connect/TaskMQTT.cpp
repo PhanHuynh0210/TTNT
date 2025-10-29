@@ -3,6 +3,27 @@
 
 Preferences mqttPrefs;
 Preferences otaPrefs;
+Preferences SensorPrefs;
+
+String email = "";
+float thresholdTemp = 30.0;
+float thresholdHumid = 80.0;
+float thresholdLux = 400.0;
+float thresholdSoli = 300.0;
+float thresholdDistance = 50.0;
+
+#define TOPIC_LED_CONTROL 1
+#define TOPIC_RGB_CONTROL 2
+#define TOPIC_THRESHOLD_CONFIG 3
+#define TOPIC_AUTH_REQUEST 4
+#define TOPIC_OTA_UPDATE 5
+#define TOPIC_VERSION_REQUEST 6
+#define TOPIC_UNKNOWN 0
+
+String opTemp, opHumid, opSoli, opLux, opDistance;
+
+unsigned long lastMailTime = 0;
+const unsigned long MAIL_INTERVAL = 60000; 
 
 String MQTT_SERVER = server_mqtt;
 int MQTT_PORT = mqtt_port;
@@ -33,29 +54,13 @@ CAUw7C29C79Fv1C5qfPrmAESrciIxpg0X40KPMbp1ZWVbd4=
 -----END CERTIFICATE-----
 )EOF";
 
-const char* letsEncryptRootCert = R"EOF(
------BEGIN CERTIFICATE-----
-MIICjzCCAhWgAwIBAgIQXIuZxVqUxdJxVt7NiYDMJjAKBggqhkjOPQQDAzCBiDEL
-MAkGA1UEBhMCVVMxEzARBgNVBAgTCk5ldyBKZXJzZXkxFDASBgNVBAcTC0plcnNl
-eSBDaXR5MR4wHAYDVQQKExVUaGUgVVNFUlRSVVNUIE5ldHdvcmsxLjAsBgNVBAMT
-JVVTRVJUcnVzdCBFQ0MgQ2VydGlmaWNhdGlvbiBBdXRob3JpdHkwHhcNMTAwMjAx
-MDAwMDAwWhcNMzgwMTE4MjM1OTU5WjCBiDELMAkGA1UEBhMCVVMxEzARBgNVBAgT
-Ck5ldyBKZXJzZXkxFDASBgNVBAcTC0plcnNleSBDaXR5MR4wHAYDVQQKExVUaGUg
-VVNFUlRSVVNUIE5ldHdvcmsxLjAsBgNVBAMTJVVTRVJUcnVzdCBFQ0MgQ2VydGlm
-aWNhdGlvbiBBdXRob3JpdHkwdjAQBgcqhkjOPQIBBgUrgQQAIgNiAAQarFRaqflo
-I+d61SRvU8Za2EurxtW20eZzca7dnNYMYf3boIkDuAUU7FfO7l0/4iGzzvfUinng
-o4N+LZfQYcTxmdwlkWOrfzCjtHDix6EznPO/LlxTsV+zfTJ/ijTjeXmjQjBAMB0G
-A1UdDgQWBBQ64QmG1M8ZwpZ2dEl23OA1xmNjmjAOBgNVHQ8BAf8EBAMCAQYwDwYD
-VR0TAQH/BAUwAwEB/zAKBggqhkjOPQQDAwNoADBlAjA2Z6EWCNzklwBBHU6+4WMB
-zzuqQhFkoJ2UOQIReVx7Hfpkue4WQrO/isIJxOzksU0CMQDpKmFHjFJKS04YcPbW
-RNZu9YO6bVi9JNlWSOrvxKJGgYhqOkbRqZtNyWHa0V1Xahg=
------END CERTIFICATE-----
-)EOF";
 
 
 
 WiFiClientSecure espSecure; 
 PubSubClient client(espSecure);
+
+// decoder
 String urlDecode(String input) {
   String decoded = "";
   char temp[] = "0x00";
@@ -136,30 +141,23 @@ float parseValue(const JsonVariant &v) {
 }
 
 
-void callback(char *topic, byte *payload, unsigned int length)
-{
-    String message;
-    for (unsigned int i = 0; i < length; i++)
-    {
-        message += (char)payload[i];
-    }
-    if (String(topic) == "esp32/control/led") {
-    digitalWrite(6, message == "1" ? HIGH : LOW);
-    }
-    else if (String(topic) == "esp32/control/rgb") {
-        digitalWrite(6, message == "1" ? HIGH : LOW);
-    }
-    else if (String(topic) == "esp32/control/mode") {
-        rgbMode = message; // "auto" hoặc "static"
-    }
-    // else if (String(topic) == "esp32/control/color") {
-    //     rgbColorHex = msg;
-    //     // Chuyển hex sang RGB nếu cần
-    // }
-    else if (String(topic) == "esp32/config/threshold") {
-        JsonDocument doc;
-        DeserializationError err = deserializeJson(doc, message);
-        if (!err) {
+// Hash function để chuyển topic thành số
+int hashTopic(String topic) {
+    if (topic == "esp32/control/led") return TOPIC_LED_CONTROL;
+    if (topic == "esp32/control/rgb") return TOPIC_RGB_CONTROL;
+    if (topic == "esp32/config/threshold") return TOPIC_THRESHOLD_CONFIG;
+    if (topic == "esp32/auth/request") return TOPIC_AUTH_REQUEST;
+    if (topic == "esp32/ota") return TOPIC_OTA_UPDATE;
+    if (topic == "esp32/ota/version") return TOPIC_VERSION_REQUEST;
+    return TOPIC_UNKNOWN;
+}
+
+
+
+void handleThresholdConfig(String message) {
+    JsonDocument doc;
+    DeserializationError err = deserializeJson(doc, message);
+    if (!err) {
         if (doc.containsKey("temp")) {
             thresholdTemp = parseValue(doc["temp"]["value"]);
             opTemp = doc["temp"]["op"].as<String>();
@@ -184,6 +182,21 @@ void callback(char *topic, byte *payload, unsigned int length)
             email = doc["email"].as<String>();
         }
 
+        // Lưu vào Preferences
+        SensorPrefs.begin("sensor-config", false);
+        SensorPrefs.putFloat("temp", thresholdTemp);
+        SensorPrefs.putString("tempOp", opTemp);
+        SensorPrefs.putFloat("humid", thresholdHumid);
+        SensorPrefs.putString("humidOp", opHumid);
+        SensorPrefs.putFloat("lux", thresholdLux);
+        SensorPrefs.putString("luxOp", opLux);
+        SensorPrefs.putFloat("soli", thresholdSoli);
+        SensorPrefs.putString("soliOp", opSoli);
+        SensorPrefs.putFloat("distance", thresholdDistance);
+        SensorPrefs.putString("distanceOp", opDistance);
+        SensorPrefs.putString("email", email);
+        SensorPrefs.end();
+
         Serial.println("✔ Cập nhật ngưỡng và toán tử:");
         Serial.printf("  Temp: %s %.2f\n", opTemp.c_str(), thresholdTemp);
         Serial.printf("  Humid: %s %.2f\n", opHumid.c_str(), thresholdHumid);
@@ -191,16 +204,13 @@ void callback(char *topic, byte *payload, unsigned int length)
         Serial.printf("  Lux: %s %.2f\n", opLux.c_str(), thresholdLux);
         Serial.printf("  Distance: %s %.2f\n", opDistance.c_str(), thresholdDistance);
         Serial.println("  Email: " + email);
-        }
     }
-    else if (String(topic) == "esp32/auth/request") {
-        // Xử lý yêu cầu xác thực
-        handleAuthRequest(message);
-    }
-    else if (String(topic) == "esp32/ota") {
-        JsonDocument doc;
-        DeserializationError err = deserializeJson(doc, message);
-        if (!err) {
+}
+
+void handleOTAUpdate(String message) {
+    JsonDocument doc;
+    DeserializationError err = deserializeJson(doc, message);
+    if (!err) {
         String firmwareUrl = doc["url"];
         String version = doc["version"] | "unknown";
 
@@ -234,14 +244,13 @@ void callback(char *topic, byte *payload, unsigned int length)
                 break;
         }
     }
-    }
-    else if (String(topic) == "esp32/ota/version") {
+}
+
+void handleVersionRequest() {
     otaPrefs.begin("ota-info", true);
     String currentVersion = otaPrefs.getString("version", "unknown");
     otaPrefs.end();
     client.publish("esp32/ota/version/response", currentVersion.c_str());
-}
-
 }
 
 void publishData(String feed, String data)
@@ -252,7 +261,47 @@ void publishData(String feed, String data)
         client.publish(topic.c_str(), data.c_str());
     }
 }
-
+void callback(char *topic, byte *payload, unsigned int length)
+{
+    String message;
+    for (unsigned int i = 0; i < length; i++)
+    {
+        message += (char)payload[i];
+    }
+    
+    String topicStr = String(topic);
+    
+    // Sử dụng switch với hash của topic
+    switch (hashTopic(topicStr)) {
+        case TOPIC_LED_CONTROL:
+            digitalWrite(17, message == "1" ? HIGH : LOW);
+            break;
+            
+        case TOPIC_RGB_CONTROL:
+            digitalWrite(18, message == "1" ? HIGH : LOW);
+            break;
+            
+        case TOPIC_THRESHOLD_CONFIG:
+            handleThresholdConfig(message);
+            break;
+            
+        case TOPIC_AUTH_REQUEST:
+            handleAuthRequest(message);
+            break;
+            
+        case TOPIC_OTA_UPDATE:
+            handleOTAUpdate(message);
+            break;
+            
+        case TOPIC_VERSION_REQUEST:
+            handleVersionRequest();
+            break;
+            
+        default:
+            Serial.println("Unknown topic: " + topicStr);
+            break;
+    }
+}
 void InitMQTT()
 {
     espSecure.setCACert(emqxCACert);  
@@ -292,7 +341,7 @@ void InitMQTT()
         client.subscribe("esp32/control/color");
         client.subscribe("esp32/config/threshold");
         client.subscribe("esp32/ota");
-        client.subscribe("esp32/auth/request");  // Subscribe topic xác thực
+        client.subscribe("esp32/auth/request"); 
         client.subscribe("esp32/ota/version"); 
 }
 
@@ -312,8 +361,8 @@ void reconnectMQTT()
 
 void initMQTT()
 {
-    // Load settings from preferences first
     loadMQTTSettings();
+    initAlertSystem();
     
     client.setServer(MQTT_SERVER.c_str(), MQTT_PORT);
     client.setCallback(callback);
@@ -335,7 +384,6 @@ void handleAuthRequest(String message) {
     Serial.println("=== Auth Request Received ===");
     Serial.println("Message: " + message);
     
-    // Parse JSON message
     JsonDocument doc;
     DeserializationError err = deserializeJson(doc, message);
     if (!err) {
@@ -384,4 +432,98 @@ void handleAuthRequest(String message) {
         client.publish("esp32/auth/response", errorJson.c_str());
     }
     Serial.println("=============================");
+}
+
+// ===== ALERT SYSTEM FUNCTIONS (moved from WebServer) =====
+
+void initAlertSystem() {
+    SensorPrefs.begin("sensor-config", true);
+    email = SensorPrefs.getString("email", "");
+    thresholdTemp = SensorPrefs.getFloat("temp", 30.0);
+    thresholdHumid = SensorPrefs.getFloat("humid", 80.0);
+    thresholdLux = SensorPrefs.getFloat("lux", 400.0);
+    thresholdSoli = SensorPrefs.getFloat("soli", 300.0);
+    thresholdDistance = SensorPrefs.getFloat("distance", 50.0);
+    opTemp = SensorPrefs.getString("tempOp", ">");
+    opHumid = SensorPrefs.getString("humidOp", ">");
+    opLux = SensorPrefs.getString("luxOp", ">");
+    opSoli = SensorPrefs.getString("soliOp", ">");
+    opDistance = SensorPrefs.getString("distanceOp", "<");
+    SensorPrefs.end();
+
+    Serial.println("== Alert System Initialized ==");
+    Serial.println("Email: " + email);
+    Serial.printf("Ngưỡng nhiệt độ: %s %.2f°C\n", opTemp.c_str(), thresholdTemp);
+    Serial.printf("Ngưỡng độ ẩm: %s %.2f%%\n", opHumid.c_str(), thresholdHumid);
+    Serial.printf("Ngưỡng ánh sáng: %s %.2f lux\n", opLux.c_str(), thresholdLux);
+    Serial.printf("Ngưỡng độ ẩm đất: %s %.2f\n", opSoli.c_str(), thresholdSoli);
+    Serial.printf("Ngưỡng khoảng cách: %s %.2f cm\n", opDistance.c_str(), thresholdDistance);
+}
+
+bool compareThreshold(float value, String op, float threshold) {
+    if (op == ">")  return value > threshold;
+    if (op == ">=") return value >= threshold;
+    if (op == "<")  return value < threshold;
+    if (op == "<=") return value <= threshold;
+    if (op == "==") return value == threshold;
+    if (op == "!=") return value != threshold;
+    return false; // Không khớp toán tử nào
+}
+
+void sendAlertEmail(float temp, float humid, float soli, float distance, float lux, String reason) {
+    if (email.length() > 5) {
+        unsigned long now = millis();
+        if (now - lastMailTime > MAIL_INTERVAL || lastMailTime == 0) {
+            StaticJsonDocument<1024> doc;
+            doc["device"] = NAME_DEVICE;
+            doc["temp"] = temp;
+            doc["humid"] = humid;
+            doc["lux"] = lux;
+            doc["soli"] = soli;
+            doc["distance"] = distance;
+            doc["message"] = reason;
+            String alertContent;
+            serializeJson(doc, alertContent);
+            sendMail(alertContent, email);
+            lastMailTime = now;
+            
+            Serial.println("=== Alert Email Sent ===");
+            Serial.println("Reason: " + reason);
+            Serial.println("Email: " + email);
+        }
+    }
+}
+
+void checkAndSendAlerts(float temp, float humid, float soli, float distance, float lux) {
+    bool shouldAlert = false;
+    String reason = "";
+
+    if (compareThreshold(temp, opTemp, thresholdTemp)) {
+        shouldAlert = true;
+        reason += "Nhiệt độ vi phạm ngưỡng (" + String(temp) + "°C " + opTemp + " " + String(thresholdTemp) + "°C)<br>";
+    }
+
+    if (compareThreshold(humid, opHumid, thresholdHumid)) {
+        shouldAlert = true;
+        reason += "Độ ẩm vi phạm ngưỡng (" + String(humid) + "% " + opHumid + " " + String(thresholdHumid) + "%)<br>";
+    }
+
+    if (compareThreshold(lux, opLux, thresholdLux)) {
+        shouldAlert = true;
+        reason += "Ánh sáng vi phạm ngưỡng (" + String(lux) + " lux " + opLux + " " + String(thresholdLux) + " lux)<br>";
+    }
+
+    if (compareThreshold(soli, opSoli, thresholdSoli)) {
+        shouldAlert = true;
+        reason += "Độ ẩm đất vi phạm ngưỡng (" + String(soli) + " " + opSoli + " " + String(thresholdSoli) + ")<br>";
+    }
+
+    if (compareThreshold(distance, opDistance, thresholdDistance)) {
+        shouldAlert = true;
+        reason += "Có vật cản gần (" + String(distance) + " cm " + opDistance + " " + String(thresholdDistance) + " cm)<br>";
+    }
+
+    if (shouldAlert) {
+        sendAlertEmail(temp, humid, soli, distance, lux, reason);
+    }
 }

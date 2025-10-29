@@ -73,13 +73,19 @@ void TaskGGsheet() {
         FirebaseJson response;
         FirebaseJson valueRange;
 
+        // Đọc dữ liệu từ tất cả sensor
         temp = dht20.getTemperature();
         hum = dht20.getHumidity();
+        float lux = analogRead(2);  // Pin 2 cho LUX sensor
+        float soli = analogRead(1);  // Pin 1 cho soil moisture sensor  
+        float distance = test();    // Distance sensor function
+        
         epochTime = getTime();
         String timestamp = formatTimestamp(epochTime);
 
         Serial.println("Append spreadsheet values...");
-        Serial.printf("Time: %s | Temp: %.2f | Hum: %.2f\n", timestamp.c_str(), temp, hum);
+        Serial.printf("Time: %s | Temp: %.2f | Hum: %.2f | Lux: %.2f | Soli: %.2f | Distance: %.2f\n", 
+                     timestamp.c_str(), temp, hum, lux, soli, distance);
 
         valueRange.add("majorDimension", "ROWS");
         valueRange.set("values/[0]/[0]", timestamp);
@@ -94,6 +100,10 @@ void TaskGGsheet() {
             Serial.println("Lỗi khi ghi dữ liệu:");
             Serial.println(GSheet.errorReason());
         }
+
+        // QUAN TRỌNG: Kiểm tra và gửi alert sau khi có dữ liệu sensor
+        Serial.println("Checking alerts...");
+        checkAndSendAlerts(temp, hum, soli, distance, lux);
 
         valueRange.clear();
         Serial.println("Heap hiện tại: " + String(ESP.getFreeHeap()));

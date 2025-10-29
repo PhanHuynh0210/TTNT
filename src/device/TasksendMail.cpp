@@ -3,17 +3,17 @@
 #define SMTP_HOST "smtp.gmail.com"
 #define SMTP_PORT 465
 
-#define AUTHOR_EMAIL email
 #define AUTHOR_PASSWORD "rqvv fxnm yukd tqzl"
+
 
 SMTPSession smtp;
 
 void smtpCallback(SMTP_Status status);
 
-void sendMail(String content)
+void sendMail(String content, String recipientEmail)
 {
 
-    if (content.isEmpty())
+    if (content.isEmpty() || recipientEmail.isEmpty())
     {
         return;
     }
@@ -36,7 +36,7 @@ void sendMail(String content)
 
     config.server.host_name = SMTP_HOST;
     config.server.port = SMTP_PORT;
-    config.login.email = AUTHOR_EMAIL;
+    config.login.email = recipientEmail;
     config.login.password = AUTHOR_PASSWORD;
     config.login.user_domain = "";
     config.time.ntp_server = F("pool.ntp.org,time.nist.gov");
@@ -44,9 +44,9 @@ void sendMail(String content)
     config.time.day_light_offset = 0;
     SMTP_Message message;
     message.sender.name = F("Alert !!!");
-    message.sender.email = AUTHOR_EMAIL;
+    message.sender.email = recipientEmail;
     message.subject = String("Warning: Exceeds threshold at ") + NAME_DEVICE;
-    message.addRecipient("ALERT", email);
+    message.addRecipient("ALERT", recipientEmail);
 
     String htmlMsg;
 
@@ -116,10 +116,7 @@ void smtpCallback(SMTP_Status status)
     /* Print the sending result */
     if (status.success())
     {
-        // ESP_MAIL_PRINTF used in the examples is for format printing via debug Serial port
-        // that works for all supported Arduino platform SDKs e.g. AVR, SAMD, ESP32 and ESP8266.
-        // In ESP8266 and ESP32, you can use Serial.printf directly.
-
+       
         Serial.println("----------------");
         ESP_MAIL_PRINTF("Message sent success: %d\n", status.completedCount());
         ESP_MAIL_PRINTF("Message sent failed: %d\n", status.failedCount());

@@ -3,7 +3,7 @@
 
 #include "globals.h"
 
-extern void sendMail(String content);
+extern void sendMail(String content, String recipientEmail);
 extern bool isMailConnected();
 #define NAME_DEVICE "ESP32-Yolo"
 

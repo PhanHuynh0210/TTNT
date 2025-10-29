@@ -5,6 +5,7 @@
 
 enum SystemStatus {
     STATUS_BOOTING,           // Khởi động
+    STATUS_CONNECTING,        // Đang kết nối WiFi/MQTT
     STATUS_NORMAL,            // Hoạt động bình thường
     STATUS_ERROR,             // Lỗi kết nối
     STATUS_AP_MODE,           // Chế độ Access Point

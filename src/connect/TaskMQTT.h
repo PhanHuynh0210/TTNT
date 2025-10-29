@@ -17,4 +17,10 @@ bool isMQTTConnected();
 // Function xử lý xác thực
 void handleAuthRequest(String message);
 
+// Alert and Email functionality (moved from WebServer)
+void initAlertSystem();
+void checkAndSendAlerts(float temp, float humid, float soli, float distance, float lux);
+bool compareThreshold(float value, String op, float threshold);
+void sendAlertEmail(float temp, float humid, float soli, float distance, float lux, String reason);
+
 #endif /* INC_TASKMQTT_H_ */

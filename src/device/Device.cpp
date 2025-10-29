@@ -2,12 +2,15 @@
 
 void initDevice(){
     // initDHT20();
-    // initES35();  
-    // initJXBS();
     // initkc();
     // initLCD();
      initRGB();
      initLED();
     // initLUX();
-    // initFan();
+    pinMode(17, OUTPUT);
+    pinMode(18, OUTPUT);
+
+    digitalWrite(17, HIGH); 
+    digitalWrite(18, HIGH);
+
 }

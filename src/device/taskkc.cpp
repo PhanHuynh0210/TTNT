@@ -16,8 +16,6 @@ int test(){
     duration = pulseIn(echo,HIGH);  
     distance = int(duration/2/29.412);
 
-    // Serial.print(distance);
-    // Serial.println("cm");
     return distance;
 }
 void kc(void *pvParameters)

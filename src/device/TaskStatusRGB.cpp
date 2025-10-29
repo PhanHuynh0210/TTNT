@@ -8,16 +8,19 @@ Adafruit_NeoPixel statusNeoPixel(STATUS_NUM_PIXELS, STATUS_RGB_PIN, NEO_GRB + NE
 SystemStatus currentStatus = STATUS_BOOTING;
 static bool ledState = false;
 static unsigned long lastBlinkTime = 0;
+static unsigned long bootStartTime = 0;
+static unsigned long connectStartTime = 0;
 
 const uint32_t statusColors[] = {
     0xFFFF00,  // STATUS_BOOTING - Vàng
+    0xFF00FF,  // STATUS_CONNECTING - Tím
     0x00FF00,  // STATUS_NORMAL - Xanh lá
-    0xFF0000,  // STATUS_ERROR - Đỏ
+    0xF00000,  // STATUS_ERROR - Đỏ
     0x0000FF,  // STATUS_AP_MODE - Xanh dương
-    0xffffff   // STATUS_OTA_UPDATE - 
+    0xffffff   // STATUS_OTA_UPDATE - Trắng
 };
 
-const uint16_t blinkIntervals[] = {500, 1000, 200, 1000, 300};
+const uint16_t blinkIntervals[] = {500, 300, 1000, 200, 1000, 300};
 
 void TaskStatusRGB(void *pvParameters)
 {
@@ -26,6 +29,7 @@ void TaskStatusRGB(void *pvParameters)
     statusNeoPixel.clear();
     statusNeoPixel.show();
     
+    bootStartTime = millis();
     
     while (1)
     {
@@ -58,6 +62,12 @@ void setStatus(SystemStatus status)
         currentStatus = status;
         lastBlinkTime = millis();
         ledState = false;
+        if (status == STATUS_BOOTING) {
+            bootStartTime = millis();
+        }
+        if (status == STATUS_CONNECTING) {
+            connectStartTime = millis();
+        }
     }
 }
 
@@ -69,18 +79,49 @@ void updateSystemStatus() {
         return;
     }
     
-    // Nếu cả WiFi và MQTT đều kết nối thành công
+    // BOOTING: chỉ kiểm tra nút BOOT trong 10s, sau đó chuyển sang CONNECTING
+    if (currentStatus == STATUS_BOOTING) {
+        if (checkBootButtonNonBlocking()) {
+            if (!isAPMode()) {
+                initAP();
+            }
+            setStatus(STATUS_AP_MODE);
+            return;
+        }
+        if (millis() - bootStartTime >= 10000UL) {
+            // Kết thúc giai đoạn boot -> bắt đầu kết nối WiFi/MQTT
+            setStatus(STATUS_CONNECTING);
+            InitWiFi();
+            initMQTT();
+            return;
+        }
+        return; // chỉ ở trong boot logic trong 10s
+    }
+
+    // CONNECTING: hiển thị đèn tím, chờ WiFi + MQTT. Thành công -> NORMAL, timeout -> ERROR
+    if (currentStatus == STATUS_CONNECTING) {
+        if (wifiConnected && mqttConnected) {
+            setStatus(STATUS_NORMAL);
+            return;
+        }
+        // Cho thời gian kết nối tổng 20s
+        if (millis() - connectStartTime >= 20000UL) {
+            if (!(wifiConnected && mqttConnected)) {
+                setStatus(STATUS_ERROR);
+            }
+            return;
+        }
+        return;
+    }
+
+    // Các trạng thái còn lại: cập nhật theo thực tế kết nối
     if (wifiConnected && mqttConnected) {
         setStatus(STATUS_NORMAL);
+        return;
     }
-    // Nếu WiFi kết nối nhưng MQTT chưa kết nối
-    else if (wifiConnected && !mqttConnected) {
-        // Giữ nguyên trạng thái hiện tại (có thể là BOOTING hoặc ERROR)
-        // Không chuyển sang NORMAL cho đến khi MQTT cũng kết nối
-    }
-    // Nếu WiFi không kết nối
-    else if (!wifiConnected) {
+    if (!wifiConnected || !mqttConnected) {
         setStatus(STATUS_ERROR);
+        return;
     }
 }
 
