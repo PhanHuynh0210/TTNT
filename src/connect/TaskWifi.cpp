@@ -78,11 +78,4 @@ bool Wifi_reconnect() {
     return false;
 }
 
-void clearWiFiSettings() {    
-    wifiPrefs.begin("wifi-config", false);
-    wifiPrefs.clear(); 
-    wifiPrefs.end();
-    WiFi.disconnect(true);
-    delay(1000);
-    ESP.restart();
-}
+

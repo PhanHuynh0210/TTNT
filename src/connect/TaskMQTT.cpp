@@ -121,19 +121,6 @@ void saveMQTTSettings(String server, String username, String key) {
     client.setServer(MQTT_SERVER.c_str(), MQTT_PORT);
 }
 
-void clearMQTTSettings() {
-    Serial.println("Clearing saved MQTT settings...");
-    
-    mqttPrefs.begin("mqtt-config", false);
-    mqttPrefs.clear();
-    mqttPrefs.end();
-    
-    Serial.println("MQTT settings cleared successfully!");
-    
-    MQTT_SERVER = "";
-    IO_USERNAME = "";
-    IO_KEY = "";
-}
 float parseValue(const JsonVariant &v) {
   if (v.is<float>()) return v.as<float>();
   if (v.is<const char*>()) return String(v.as<const char*>()).toFloat();
