@@ -3,7 +3,6 @@
 
 void setup(){
   Serial.begin(115200);
-  // clearAllSettings();
   initStatusRGB();  
   initDevice();
   initSystemMonitor();

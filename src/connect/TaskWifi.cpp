@@ -12,13 +12,9 @@ bool attemptConnect(String ssid, String pass, bool forceDisconnect)
     }
 
     if (WiFi.status() == WL_CONNECTED) {
-        Serial.println("\n Connected to WiFi!");
-        Serial.println("IP Address: " + WiFi.localIP().toString());
-        // Cập nhật trạng thái hệ thống khi WiFi kết nối thành công
         updateSystemStatus();
         return true;
     } else {
-        Serial.println("\n Connection failed.");
         return false;
     }
 }
@@ -28,7 +24,6 @@ void saveWiFi(String ssid, String pass) {
     wifiPrefs.putString("ssid", ssid);
     wifiPrefs.putString("pass", pass);
     wifiPrefs.end();
-    Serial.println("WiFi settings saved successfully!");
 }
 
 String getSSID() {
@@ -54,28 +49,12 @@ void InitWiFi() {
     String savedSSID = getSSID();
     String savedPass = getPassword();
     if (savedSSID.length() > 0) {
-        Serial.println("Trying saved WiFi: " + savedSSID);
         bool success = attemptConnect(savedSSID, savedPass, false);
         if (success) {
             return;
-        } else {
-            Serial.println("\n Saved WiFi failed.");
-        }
-    } else {
-        Serial.println("No saved WiFi found in Preferences.");
-    }
+        } 
+    } 
     
-    Serial.println("WiFi initialization failed. Access Point mode available.");
-}
-
-bool Wifi_reconnect() {
-    if (WiFi.status() == WL_CONNECTED) {
-        return true;
-    }
-
-    InitWiFi();
-
-    return false;
 }
 
 

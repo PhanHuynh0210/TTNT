@@ -31,7 +31,6 @@ bool checkBootButtonNonBlocking() {
     if (!wasPressed) {
       wasPressed = true;
       pressStartTime = now;
-      Serial.println("Giữ BOOT để vào Access Point...");
       setStatus(STATUS_BOOTING);
     }
     if (now - pressStartTime >= HOLD_TIME) {
@@ -76,7 +75,6 @@ void accpoint() {
   }
   
   if (millis() - apStartTime > AP_TIMEOUT) {
-    Serial.println("Access Point timeout after 15 minutes. Stopping AP...");
     WiFiClient timeoutClient = apServer.available();
     if (timeoutClient) {
       timeoutClient.println("HTTP/1.1 200 OK");
@@ -243,7 +241,6 @@ void saveAccountSettings(String username, String password) {
   accountPrefs.putString("username", username);
   accountPrefs.putString("password", password);
   accountPrefs.end();
-  Serial.println("Account settings saved successfully!");
 }
 
 String getCurrentAccountUsername() {

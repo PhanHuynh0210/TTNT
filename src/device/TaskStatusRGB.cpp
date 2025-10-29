@@ -102,6 +102,7 @@ void updateSystemStatus() {
     if (currentStatus == STATUS_CONNECTING) {
         if (wifiConnected && mqttConnected) {
             setStatus(STATUS_NORMAL);
+            initGGsheet();
             return;
         }
         // Cho thời gian kết nối tổng 20s
@@ -114,7 +115,6 @@ void updateSystemStatus() {
         return;
     }
 
-    // Các trạng thái còn lại: cập nhật theo thực tế kết nối
     if (wifiConnected && mqttConnected) {
         setStatus(STATUS_NORMAL);
         return;

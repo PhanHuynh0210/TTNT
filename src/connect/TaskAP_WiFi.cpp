@@ -25,14 +25,9 @@ void handleAPWifiConnect(WiFiClient &client, const String &ssid, const String &p
   String ssidClean = ssid; // already decoded by caller
   String passClean = pass;
 
-  Serial.println("SSID: " + ssidClean);
-  Serial.println("PASS: " + passClean);
-  Serial.println("WiFi save.");
   delay(1000);
 
   WiFi.begin(ssidClean.c_str(), passClean.c_str());
-  Serial.println("Attempting to connect to new WiFi...");
-  Serial.println("SSID: " + ssidClean);
 
   unsigned long startAttemptTime = millis();
   int dotCount = 0;
