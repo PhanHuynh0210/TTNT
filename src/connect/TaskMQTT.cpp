@@ -347,7 +347,7 @@ void reconnectMQTT()
     }
     else
     {
-        if (WiFi.status() == WL_CONNECTED) {
+        if (!isAPMode() && WiFi.status() == WL_CONNECTED ) {
             InitMQTT();
         }
     }
@@ -425,7 +425,6 @@ void handleAuthRequest(String message) {
         serializeJson(errorDoc, errorJson);
         client.publish("esp32/auth/response", errorJson.c_str());
     }
-    Serial.println("=============================");
 }
 
 // ===== ALERT SYSTEM FUNCTIONS (moved from WebServer) =====

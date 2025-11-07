@@ -52,6 +52,10 @@ String formatTimestamp(unsigned long epochTime) {
 
 
 void TaskGGsheet() {
+    if (isAPMode()) {
+        return;
+    }
+
     bool ready = GSheet.ready();
 
     if (ready && !gsheetHeaderDone) {
