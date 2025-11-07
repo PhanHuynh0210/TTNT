@@ -45,7 +45,7 @@ bool isWiFiConnected() {
 }
 
 void InitWiFi() {
-    WiFi.mode(WIFI_AP_STA);
+    WiFi.mode(WIFI_STA);
     String savedSSID = getSSID();
     String savedPass = getPassword();
     if (savedSSID.length() > 0) {
