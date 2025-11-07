@@ -11,6 +11,11 @@ jobs:
     steps:
       - name: Checkout source code
         uses: actions/checkout@v4
+        
+      - name: Wait for release to finish processing
+        run: |
+          echo "Waiting 20 seconds for release assets to be ready..."
+          sleep 20
 
       - name: Download firmware.bin from release
         uses: robinraju/release-downloader@v1.8
