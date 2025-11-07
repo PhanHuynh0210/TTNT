@@ -31,8 +31,6 @@
 #include "../src/connect/TaskMQTT.h"
 #include "../src/device/taskkc.h"
 #include "../src/device/TaskDHT20.h"
-#include "../src/device/TaskLED.h"
-#include "../src/device/TaskRGB.h"
 #include "../src/device/TaskLUX.h"
 #include "../src/device/TaskLCD.h"
 #include "../src/device/TaskHumid.h"

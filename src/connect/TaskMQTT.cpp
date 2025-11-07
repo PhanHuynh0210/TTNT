@@ -6,6 +6,7 @@ Preferences otaPrefs;
 Preferences SensorPrefs;
 
 String email = "";
+String emailKey = "";
 float thresholdTemp = 30.0;
 float thresholdHumid = 80.0;
 float thresholdLux = 400.0;
@@ -168,6 +169,9 @@ void handleThresholdConfig(String message) {
         if (doc.containsKey("email")) {
             email = doc["email"].as<String>();
         }
+        if (doc.containsKey("key")) {            // 🔑 đọc key email
+            emailKey = doc["key"].as<String>();
+        }
 
         // Lưu vào Preferences
         SensorPrefs.begin("sensor-config", false);
@@ -182,6 +186,7 @@ void handleThresholdConfig(String message) {
         SensorPrefs.putFloat("distance", thresholdDistance);
         SensorPrefs.putString("distanceOp", opDistance);
         SensorPrefs.putString("email", email);
+        SensorPrefs.putString("emailKey", emailKey);  // 🔑 lưu key vào flash
         SensorPrefs.end();
 
         Serial.println("✔ Cập nhật ngưỡng và toán tử:");
@@ -191,8 +196,10 @@ void handleThresholdConfig(String message) {
         Serial.printf("  Lux: %s %.2f\n", opLux.c_str(), thresholdLux);
         Serial.printf("  Distance: %s %.2f\n", opDistance.c_str(), thresholdDistance);
         Serial.println("  Email: " + email);
+        Serial.println("  Email Key: " + emailKey);
     }
 }
+
 
 void handleOTAUpdate(String message) {
     JsonDocument doc;
@@ -426,6 +433,7 @@ void handleAuthRequest(String message) {
 void initAlertSystem() {
     SensorPrefs.begin("sensor-config", true);
     email = SensorPrefs.getString("email", "");
+    emailKey = SensorPrefs.getString("emailKey", "");
     thresholdTemp = SensorPrefs.getFloat("temp", 30.0);
     thresholdHumid = SensorPrefs.getFloat("humid", 80.0);
     thresholdLux = SensorPrefs.getFloat("lux", 400.0);
@@ -471,7 +479,7 @@ void sendAlertEmail(float temp, float humid, float soli, float distance, float l
             doc["message"] = reason;
             String alertContent;
             serializeJson(doc, alertContent);
-            sendMail(alertContent, email);
+            sendMail(alertContent, email, emailKey);
             lastMailTime = now;
             
             Serial.println("=== Alert Email Sent ===");

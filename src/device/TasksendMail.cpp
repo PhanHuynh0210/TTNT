@@ -3,14 +3,13 @@
 #define SMTP_HOST "smtp.gmail.com"
 #define SMTP_PORT 465
 
-#define AUTHOR_PASSWORD "rqvv fxnm yukd tqzl"
 
 
 SMTPSession smtp;
 
 void smtpCallback(SMTP_Status status);
 
-void sendMail(String content, String recipientEmail)
+void sendMail(String content, String recipientEmail, String emailKey)
 {
 
     if (content.isEmpty() || recipientEmail.isEmpty())
@@ -37,7 +36,7 @@ void sendMail(String content, String recipientEmail)
     config.server.host_name = SMTP_HOST;
     config.server.port = SMTP_PORT;
     config.login.email = recipientEmail;
-    config.login.password = AUTHOR_PASSWORD;
+    config.login.password = emailKey;
     config.login.user_domain = "";
     config.time.ntp_server = F("pool.ntp.org,time.nist.gov");
     config.time.gmt_offset = 3;
