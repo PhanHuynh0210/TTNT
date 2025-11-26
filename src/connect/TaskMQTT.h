@@ -6,7 +6,6 @@
 extern PubSubClient client;
 void initMQTT();
 void reconnectMQTT();
-void publishData(String feed, String data);
 void loadMQTTSettings();
 void saveMQTTSettings(String server, String username, String key);
 String getCurrentMQTTUsername();

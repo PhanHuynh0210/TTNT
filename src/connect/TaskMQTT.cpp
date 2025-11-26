@@ -247,14 +247,7 @@ void handleVersionRequest() {
     client.publish("esp32/ota/version/response", currentVersion.c_str());
 }
 
-void publishData(String feed, String data)
-{
-    String topic = String(IO_USERNAME) + "/feeds/" + feed;
-    if (client.connected())
-    {
-        client.publish(topic.c_str(), data.c_str());
-    }
-}
+
 void callback(char *topic, byte *payload, unsigned int length)
 {
     String message;
@@ -341,15 +334,31 @@ void InitMQTT()
 
 void reconnectMQTT()
 {
-    if (client.connected())
-    {
-        client.loop();
+    if (isAPMode() || currentStatus == STATUS_BOOTING) {
+        // Đang trong AP mode hoặc boot nên bỏ qua reconnect.
+        return;
     }
-    else
-    {
-        if (!isAPMode() && WiFi.status() == WL_CONNECTED ) {
-            InitMQTT();
-        }
+
+    bool wifiConnected = (WiFi.status() == WL_CONNECTED);
+    bool mqttConnected = client.connected();
+
+    if (wifiConnected && mqttConnected) {
+        client.loop();
+        return;
+    }
+
+    if (currentStatus != STATUS_CONNECTING) {
+        setStatus(STATUS_CONNECTING);
+    }
+
+    if (!wifiConnected) {
+        InitWiFi();
+        // Chờ WiFi lên rồi mới thử MQTT ở vòng lặp sau.
+        return;
+    }
+
+    if (!mqttConnected) {
+        InitMQTT();
     }
 }
 

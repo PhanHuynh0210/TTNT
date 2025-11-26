@@ -14,7 +14,6 @@ void TaskLUX(void *pvParameters)
 
 int getValueLux() {
     int luxValue = analogRead(PinLux); 
-    publishData("LUX", String(luxValue)); 
     return luxValue;
 }
 

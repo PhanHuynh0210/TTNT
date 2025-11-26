@@ -39,7 +39,6 @@
 #include "../src/connect/TaskGGsheet.h"
 #include "../src/device/TasksendMail.h"
 #include "../src/device/TaskStatusRGB.h"
-#include "../src/device/TaskSystemMonitor.h"
 #include "../secrest.h"
 
 #endif
