@@ -8,12 +8,19 @@ void initMQTT();
 void reconnectMQTT();
 void loadMQTTSettings();
 void saveMQTTSettings(String server, String username, String key);
+void saveMQTTSettings(String server, String username, String key, int port);
 String getCurrentMQTTUsername();
 String getCurrentMQTTServer();
 bool isMQTTConnected();
 
+// WiFi status publisher
+void publishWiFiStatus();
+
 // Function xử lý xác thực
 void handleAuthRequest(String message);
+
+// Function xử lý cấu hình MQTT qua topic
+void handleMQTTConfigTest(String message);
 
 // Alert and Email functionality (moved from WebServer)
 void initAlertSystem();

@@ -5,8 +5,6 @@ void renderAPIndexPage(WiFiClient &client) {
   unsigned long minutes = remainingTime / 60;
   unsigned long seconds = remainingTime % 60;
 
-  String currentServer = getCurrentMQTTServer();
-  String currentUsername = getCurrentMQTTUsername();
   String currentAccountUsername = getCurrentAccountUsername();
 
   client.println("HTTP/1.1 200 OK");
@@ -26,7 +24,6 @@ void renderAPIndexPage(WiFiClient &client) {
   client.println("button:hover{background:#005a87;}");
   client.println(".note{font-size:12px;color:#666;margin-top:5px;}");
   client.println(".success{background:#d4edda;color:#155724;padding:10px;border-radius:5px;margin-bottom:15px;}");
-  client.println(".mqtt-info{background:#e7f3ff;padding:15px;border-radius:5px;margin-bottom:15px;border-left:4px solid #007cba;}");
   client.println(".highlight{background:#fff3cd;border:1px solid #ffeaa7;padding:10px;border-radius:5px;margin-bottom:15px;}");
   client.println(".wifi-item{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #eee;}");
   client.println(".wifi-name{font-weight:bold;}");
@@ -57,23 +54,6 @@ void renderAPIndexPage(WiFiClient &client) {
   client.println("<button type='submit'>Kết nối WiFi</button>");
   client.println("</form>");
   client.println("<div id='wifiMessage' class='success' style='display:none;'></div>");
-  client.println("</div>");
-
-  client.println("<div class='card'>");
-  client.println("<h2>MQTT Settings</h2>");
-  client.println("<div class='mqtt-info'>");
-  client.println("<strong>Cấu hình hiện tại:</strong><br>");
-  client.println("Server: " + currentServer + "<br>");
-  client.println("Username: " + (currentUsername.length() > 0 ? currentUsername : "Chưa cấu hình"));
-  client.println("</div>");
-  client.println("<form id='mqttForm' onsubmit='submitMQTT(event)'>");
-  client.println("<input id='mqttServer' placeholder='MQTT Server (vd: m811669b.ala.asia-southeast1.emqxsl.com' required>");
-  client.println("<div class='note'>Mặc định: m811669b.ala.asia-southeast1.emqxsl.com (port 8883)</div>");
-  client.println("<input id='mqttUsername' placeholder='MQTT Username' required>");
-  client.println("<input id='mqttKey' type='password' placeholder='MQTT Key/Password' required>");
-  client.println("<button type='submit'>Save MQTT Settings</button>");
-  client.println("</form>");
-  client.println("<div id='mqttMessage' class='success' style='display:none;'>Đã lưu cấu hình MQTT thành công!</div>");
   client.println("</div>");
 
   client.println("<div class='card'>");
@@ -140,16 +120,6 @@ void renderAPIndexPage(WiFiClient &client) {
   client.println("  const url = `/wifi?ssid=${encodeURIComponent(ssid)}&pass=${encodeURIComponent(password)}`;");
   client.println("  window.location.href = url;");
   client.println("});");
-  client.println("function submitMQTT(event) {");
-  client.println("  event.preventDefault();");
-  client.println("  const server = document.getElementById('mqttServer').value;");
-  client.println("  const username = document.getElementById('mqttUsername').value;");
-  client.println("  const key = document.getElementById('mqttKey').value;");
-  client.println("  const url = `/mqtt?server=${encodeURIComponent(server)}&username=${encodeURIComponent(username)}&key=${encodeURIComponent(key)}`;");
-  client.println("  fetch(url).then(res => res.text()).then(text => {");
-  client.println("    if (text.trim() === 'SAVED') { const msg = document.getElementById('mqttMessage'); msg.style.display = 'block'; setTimeout(() => msg.style.display = 'none', 3000); }");
-  client.println("  });");
-  client.println("}");
   client.println("function submitAccount(event) {");
   client.println("  event.preventDefault();");
   client.println("  const username = document.getElementById('accountUsername').value;");

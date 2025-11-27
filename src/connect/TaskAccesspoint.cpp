@@ -185,26 +185,8 @@ void accpoint() {
               handleAPAccountSave(client, username, password);
               break;
             }
-            else if (header.indexOf("GET /mqtt?server=") >= 0) {
-              int serverIndex = header.indexOf("server=") + 7;
-              int usernameIndex = header.indexOf("&username=") + 10;
-              int keyIndex = header.indexOf("&key=");
-              int httpIndex = header.indexOf("HTTP");
-              
-              String server = header.substring(serverIndex, usernameIndex - 10);
-              String username = header.substring(usernameIndex, keyIndex);
-              String key = header.substring(keyIndex + 5, httpIndex - 1);
-              
-              server.replace("%20", " ");
-              server.replace("%3A", ":");
-              username.replace("%20", " ");
-              key.replace("%20", " ");
-
-              handleAPMqttSave(client, server, username, key);
-              break;
-            }
             
-            // Default page - show both forms
+            // Default page - show forms
             renderAPIndexPage(client);
 
             break;

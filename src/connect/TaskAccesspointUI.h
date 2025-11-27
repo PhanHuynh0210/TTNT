@@ -11,9 +11,6 @@ void renderAPIndexPage(WiFiClient &client);
 void handleAPScan(WiFiClient &client);
 void handleAPWifiConnect(WiFiClient &client, const String &ssid, const String &pass);
 
-// MQTT endpoints
-void handleAPMqttSave(WiFiClient &client, const String &server, const String &username, const String &key);
-
 // Account endpoints
 void handleAPAccountSave(WiFiClient &client, const String &username, const String &password);
 

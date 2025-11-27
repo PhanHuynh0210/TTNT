@@ -19,17 +19,25 @@ float thresholdDistance = 50.0;
 #define TOPIC_AUTH_REQUEST 4
 #define TOPIC_OTA_UPDATE 5
 #define TOPIC_VERSION_REQUEST 6
+#define TOPIC_MQTT_CONFIG_TEST 7
 #define TOPIC_UNKNOWN 0
 
 String opTemp, opHumid, opSoli, opLux, opDistance;
 
 unsigned long lastMailTime = 0;
-const unsigned long MAIL_INTERVAL = 60000; 
+const unsigned long MAIL_INTERVAL = 60000;
 
-String MQTT_SERVER = server_mqtt;
-int MQTT_PORT = mqtt_port;
-String IO_USERNAME = "";
-String IO_KEY = "";
+// WiFi Status publishing
+unsigned long lastWiFiStatusTime = 0;
+const unsigned long WIFI_STATUS_INTERVAL = 30000;  // 30 seconds
+
+// Forward declarations
+void InitMQTT(); 
+
+String MQTT_SERVER = "m811669b.ala.asia-southeast1.emqxsl.com";
+int MQTT_PORT = 8883;
+String IO_USERNAME = "huynh0210";
+String IO_KEY = "Huynh@0210";
 const char* emqxCACert = R"EOF(
 -----BEGIN CERTIFICATE-----
 MIIDrzCCApegAwIBAgIQCDvgVpBCRrGhdWrJWZHHSjANBgkqhkiG9w0BAQUFADBh
@@ -86,22 +94,29 @@ String urlDecode(String input) {
 }
 
 
+// MQTT Default Configuration
+#define DEFAULT_MQTT_SERVER "m811669b.ala.asia-southeast1.emqxsl.com"
+#define DEFAULT_MQTT_USERNAME "huynh0210"
+#define DEFAULT_MQTT_PASSWORD "Huynh@0210"
+
 void loadMQTTSettings() {
     mqttPrefs.begin("mqtt-config", true);
     
-    MQTT_SERVER = mqttPrefs.getString("server", "m811669b.ala.asia-southeast1.emqxsl.com");
-    IO_USERNAME = mqttPrefs.getString("username", "");
-    IO_KEY = mqttPrefs.getString("key", "");
+    MQTT_SERVER = mqttPrefs.getString("server", DEFAULT_MQTT_SERVER);
+    IO_USERNAME = mqttPrefs.getString("username", DEFAULT_MQTT_USERNAME);
+    IO_KEY = mqttPrefs.getString("key", DEFAULT_MQTT_PASSWORD);
+    MQTT_PORT = mqttPrefs.getInt("port", 8883);  // Default port for MQTT over TLS
     
     mqttPrefs.end();
 
     Serial.println("MQTT Settings loaded:");
     Serial.println("Server: " + MQTT_SERVER);
+    Serial.println("Port: " + String(MQTT_PORT));
     Serial.println("Username: " + IO_USERNAME);
     Serial.println(String("Key: ") + (IO_KEY.length() > 0 ? "****" : "empty"));
 }
 
-void saveMQTTSettings(String server, String username, String key) {
+void saveMQTTSettings(String server, String username, String key, int port) {
     key = urlDecode(key);
 
     mqttPrefs.begin("mqtt-config", false);
@@ -109,17 +124,25 @@ void saveMQTTSettings(String server, String username, String key) {
     mqttPrefs.putString("server", server);
     mqttPrefs.putString("username", username);
     mqttPrefs.putString("key", key);
+    mqttPrefs.putInt("port", port);
     
     mqttPrefs.end();
     
     Serial.println("MQTT settings saved to flash memory.");
+    Serial.printf("Server: %s, Port: %d, Username: %s\n", server.c_str(), port, username.c_str());
     
     MQTT_SERVER = server;
     IO_USERNAME = username;
     IO_KEY = key;
+    MQTT_PORT = port;
     
     // Cập nhật lại server cho client
     client.setServer(MQTT_SERVER.c_str(), MQTT_PORT);
+}
+
+// Overload for backward compatibility
+void saveMQTTSettings(String server, String username, String key) {
+    saveMQTTSettings(server, username, key, 8883);
 }
 
 float parseValue(const JsonVariant &v) {
@@ -131,12 +154,13 @@ float parseValue(const JsonVariant &v) {
 
 // Hash function để chuyển topic thành số
 int hashTopic(String topic) {
-    if (topic == "esp32/control/led") return TOPIC_LED_CONTROL;
-    if (topic == "esp32/control/rgb") return TOPIC_RGB_CONTROL;
+    if (topic == "esp32/control/relay1") return TOPIC_LED_CONTROL;
+    if (topic == "esp32/control/relay2") return TOPIC_RGB_CONTROL;
     if (topic == "esp32/config/threshold") return TOPIC_THRESHOLD_CONFIG;
     if (topic == "esp32/auth/request") return TOPIC_AUTH_REQUEST;
     if (topic == "esp32/ota") return TOPIC_OTA_UPDATE;
     if (topic == "esp32/ota/version") return TOPIC_VERSION_REQUEST;
+    if (topic == "esp32/config/mqtt/test") return TOPIC_MQTT_CONFIG_TEST;
     return TOPIC_UNKNOWN;
 }
 
@@ -222,6 +246,10 @@ void handleOTAUpdate(String message) {
         // Chuyển sang trạng thái OTA update - đèn cam nhấp nháy
         setStatus(STATUS_OTA_UPDATE);
         
+        // Gửi thông báo bắt đầu OTA qua topic wifi status
+        client.publish("esp32/status/wifi", "ota_update");
+        delay(100);  // Đảm bảo message được gửi
+        
         t_httpUpdate_return ret = httpUpdate.update(otaClient, firmwareUrl);
         switch (ret) {
             case HTTP_UPDATE_FAILED:
@@ -234,7 +262,6 @@ void handleOTAUpdate(String message) {
                 break;
             case HTTP_UPDATE_OK:
                 Serial.println("OTA thành công. ESP sẽ khởi động lại.");
-                // Giữ trạng thái OTA_UPDATE cho đến khi restart
                 break;
         }
     }
@@ -247,6 +274,165 @@ void handleVersionRequest() {
     client.publish("esp32/ota/version/response", currentVersion.c_str());
 }
 
+// ===== MQTT CONFIG TEST - Test new MQTT configuration via topic =====
+void handleMQTTConfigTest(String message) {
+    Serial.println("=== MQTT Config Test Received ===");
+    Serial.println("Payload: " + message);
+    
+    JsonDocument doc;
+    DeserializationError err = deserializeJson(doc, message);
+    
+    if (err) {
+        Serial.println("JSON parse error: " + String(err.c_str()));
+        // Gửi response lỗi
+        JsonDocument errorDoc;
+        errorDoc["status"] = "error";
+        errorDoc["reason"] = "Invalid JSON format: " + String(err.c_str());
+        String errorJson;
+        serializeJson(errorDoc, errorJson);
+        client.publish("esp32/config/mqtt/mqtt_result", errorJson.c_str());
+        return;
+    }
+    
+    // Lấy thông tin từ JSON
+    String newHost = doc["host"].as<String>();
+    String newUsername = doc["username"].as<String>();
+    String newPassword = doc["password"].as<String>();
+    
+    Serial.println("New Host: " + newHost);
+    Serial.println("New Username: " + newUsername);
+    Serial.println("New Password: " + String(newPassword.length() > 0 ? "****" : "empty"));
+    
+    // Validate input
+    if (newHost.length() == 0 || newUsername.length() == 0 || newPassword.length() == 0) {
+        JsonDocument errorDoc;
+        errorDoc["status"] = "error";
+        errorDoc["reason"] = "Missing required fields (host, username, password)";
+        String errorJson;
+        serializeJson(errorDoc, errorJson);
+        client.publish("esp32/config/mqtt/mqtt_result", errorJson.c_str());
+        Serial.println("Error: Missing required fields");
+        return;
+    }
+    
+    // Parse host URL để lấy server
+    // Format hỗ trợ: wss://server:port/mqtt, mqtts://server:port, server:port, server
+    String testServer = newHost;
+    int testPort = 8883; // Default MQTT over TLS port (ESP32 dùng MQTTS, không phải WSS)
+    
+    // Xử lý URL format wss://server:port/mqtt hoặc mqtts://server:port
+    if (newHost.startsWith("wss://")) {
+        testServer = newHost.substring(6); // Bỏ "wss://"
+        testPort = 8883; // ESP32 dùng MQTT over TLS, không phải WebSocket
+    } else if (newHost.startsWith("ws://")) {
+        testServer = newHost.substring(5); // Bỏ "ws://"
+        testPort = 8883;
+    } else if (newHost.startsWith("mqtts://")) {
+        testServer = newHost.substring(8); // Bỏ "mqtts://"
+    } else if (newHost.startsWith("mqtt://")) {
+        testServer = newHost.substring(7); // Bỏ "mqtt://"
+        testPort = 1883; // Non-TLS port
+    }
+    
+    // Tách port nếu có trong URL (nhưng ưu tiên dùng 8883 cho TLS)
+    int colonIndex = testServer.indexOf(':');
+    int slashIndex = testServer.indexOf('/');
+    
+    if (colonIndex > 0) {
+        // Chỉ lấy server name, bỏ port trong URL vì ESP32 dùng port 8883
+        testServer = testServer.substring(0, colonIndex);
+    }
+    
+    // Bỏ phần path (/mqtt)
+    slashIndex = testServer.indexOf('/');
+    if (slashIndex > 0) {
+        testServer = testServer.substring(0, slashIndex);
+    }
+    
+    Serial.println("Parsed Server: " + testServer);
+    Serial.println("Using Port: " + String(testPort) + " (MQTT over TLS)");
+    
+    // Lưu cấu hình hiện tại để có thể khôi phục
+    String backupServer = MQTT_SERVER;
+    int backupPort = MQTT_PORT;
+    String backupUsername = IO_USERNAME;
+    String backupKey = IO_KEY;
+    
+    // Tạo client test mới
+    WiFiClientSecure testSecure;
+    testSecure.setCACert(emqxCACert);
+    PubSubClient testClient(testSecure);
+    testClient.setServer(testServer.c_str(), testPort);
+    
+    Serial.println("Testing connection to new MQTT server...");
+    
+    // Thử kết nối với thông tin mới
+    String testClientId = "ESP32Test" + String(random(0, 10000));
+    bool connectSuccess = testClient.connect(testClientId.c_str(), newUsername.c_str(), newPassword.c_str());
+    
+    JsonDocument resultDoc;
+    
+    if (connectSuccess) {
+        Serial.println("✅ Test connection successful!");
+        
+        // Ngắt kết nối test
+        testClient.disconnect();
+        
+        // Lưu cấu hình mới vào flash (bao gồm port)
+        saveMQTTSettings(testServer, newUsername, newPassword, testPort);
+        
+        resultDoc["status"] = "ok";
+        
+        String resultJson;
+        serializeJson(resultDoc, resultJson);
+        
+        // Gửi kết quả qua kết nối hiện tại trước khi chuyển đổi
+        client.publish("esp32/config/mqtt/mqtt_result", resultJson.c_str());
+        Serial.println("Result sent: " + resultJson);
+        
+        // Cho thời gian gửi message
+        delay(500);
+        
+        // Ngắt kết nối cũ và kết nối lại với server mới
+        Serial.println("Switching to new MQTT server...");
+        client.disconnect();
+        
+        // Cập nhật client chính với server mới
+        espSecure.setCACert(emqxCACert);
+        client.setServer(MQTT_SERVER.c_str(), MQTT_PORT);
+        
+        // Kết nối lại
+        delay(1000);
+        InitMQTT();
+        
+    } else {
+        int state = testClient.state();
+        String errorReason = "Connection failed. ";
+        
+        switch (state) {
+            case -4: errorReason += "MQTT_CONNECTION_TIMEOUT"; break;
+            case -3: errorReason += "MQTT_CONNECTION_LOST"; break;
+            case -2: errorReason += "MQTT_CONNECT_FAILED"; break;
+            case -1: errorReason += "MQTT_DISCONNECTED"; break;
+            case 1: errorReason += "MQTT_CONNECT_BAD_PROTOCOL"; break;
+            case 2: errorReason += "MQTT_CONNECT_BAD_CLIENT_ID"; break;
+            case 3: errorReason += "MQTT_CONNECT_UNAVAILABLE"; break;
+            case 4: errorReason += "MQTT_CONNECT_BAD_CREDENTIALS"; break;
+            case 5: errorReason += "MQTT_CONNECT_UNAUTHORIZED"; break;
+            default: errorReason += "Unknown error (code: " + String(state) + ")"; break;
+        }
+        
+        Serial.println("❌ Test connection failed: " + errorReason);
+        
+        resultDoc["status"] = "error";
+        resultDoc["reason"] = errorReason;
+        
+        String resultJson;
+        serializeJson(resultDoc, resultJson);
+        client.publish("esp32/config/mqtt/mqtt_result", resultJson.c_str());
+        Serial.println("Result sent: " + resultJson);
+    }
+}
 
 void callback(char *topic, byte *payload, unsigned int length)
 {
@@ -282,6 +468,10 @@ void callback(char *topic, byte *payload, unsigned int length)
             
         case TOPIC_VERSION_REQUEST:
             handleVersionRequest();
+            break;
+            
+        case TOPIC_MQTT_CONFIG_TEST:
+            handleMQTTConfigTest(message);
             break;
             
         default:
@@ -322,14 +512,13 @@ void InitMQTT()
         Serial.println(client.state());
         delay(1000);
     }
-        client.subscribe("esp32/control/led");
-        client.subscribe("esp32/control/rgb");
-        client.subscribe("esp32/control/mode");
-        client.subscribe("esp32/control/color");
+        client.subscribe("esp32/control/relay1");
+        client.subscribe("esp32/control/relay2");
         client.subscribe("esp32/config/threshold");
         client.subscribe("esp32/ota");
         client.subscribe("esp32/auth/request"); 
-        client.subscribe("esp32/ota/version"); 
+        client.subscribe("esp32/ota/version");
+        client.subscribe("esp32/config/mqtt/test");  // Topic nhận cấu hình MQTT mới
 }
 
 void reconnectMQTT()
@@ -344,6 +533,9 @@ void reconnectMQTT()
 
     if (wifiConnected && mqttConnected) {
         client.loop();
+        
+        // Gửi trạng thái WiFi mỗi 30 giây
+        publishWiFiStatus();
         return;
     }
 
@@ -381,6 +573,30 @@ String getCurrentMQTTServer() {
 
 bool isMQTTConnected() {
     return client.connected();
+}
+
+// ===== WIFI STATUS PUBLISHER =====
+void publishWiFiStatus() {
+    unsigned long now = millis();
+    
+    // Chỉ gửi nếu đã qua 30 giây và MQTT đang kết nối
+    if (now - lastWiFiStatusTime < WIFI_STATUS_INTERVAL) {
+        return;
+    }
+    
+    if (!client.connected()) {
+        return;
+    }
+    
+    lastWiFiStatusTime = now;
+    
+    // Kiểm tra WiFi còn kết nối không
+    bool wifiConnected = (WiFi.status() == WL_CONNECTED);
+    
+    String status = wifiConnected ? "connected" : "disconnected";
+    client.publish("esp32/status/wifi", status.c_str());
+    
+    Serial.println("📡 WiFi Status: " + status);
 }
 
 void handleAuthRequest(String message) {
